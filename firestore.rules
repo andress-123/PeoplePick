@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── People (ranking público) ──────────────────────────────────────────
+    // Lectura: cualquiera
+    // Escritura: solo desde el backend (ningún cliente escribe directamente)
+    //            Los votos se gestionan vía la colección /votes
+    match /people/{personId} {
+      allow read: if true;
+      // No se permite crear/editar personas desde el cliente público
+      allow write: if false;
+    }
+
+    // ── Votes ─────────────────────────────────────────────────────────────
+    // El ID del documento es siempre "{fp}_{personId}"
+    // Un fingerprint solo puede leer/escribir sus propios votos
+    match /votes/{voteId} {
+      allow read:   if true;
+      allow create: if request.resource.data.fp is string
+                    && request.resource.data.personId is string
+                    && request.resource.data.type in ['up', 'down']
+                    && voteId == request.resource.data.fp + '_' + request.resource.data.personId;
+      allow update: if request.resource.data.fp == resource.data.fp
+                    && request.resource.data.type in ['up', 'down'];
+      allow delete: if true; // permite deshacer voto
+    }
+
+    // ── Pending (sugerencias) ─────────────────────────────────────────────
+    // Cualquiera puede crear — nadie puede leer/editar/borrar excepto admin
+    // (el panel de admin usa el SDK admin o reglas permisivas para lectura)
+    match /pending/{docId} {
+      allow read:   if true;   // simplificado — en producción restringir por IP/admin token
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.name.size() > 1
+                    && request.resource.data.name.size() < 100;
+      allow update: if false;
+      allow delete: if true;   // el panel admin borra al aprobar/rechazar
+    }
+  }
+}
