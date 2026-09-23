@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mesa de redacción, escritorio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&amp;display=swap">
+<style>
+body{margin:0;background:#F3F3F1}
+a{color:#000000;text-decoration:none}a:hover{text-decoration:underline;text-underline-offset:4px}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 2300px; box-sizing: border-box; background: #F3F3F1; color: #000000; font-family: 'Schibsted Grotesk', 'Helvetica Neue', Helvetica, sans-serif; display: flex; flex-direction: column;">
+  <header style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 24px; padding: 0 48px; height: 64px; align-items: center; background: #ffffff; border-bottom: 1px solid #E4E4E0;">
+    <div style="grid-column: span 6; display: flex; align-items: center; gap: 14px;"><svg width="47" height="24" viewBox="0 0 188.92 97.36" fill="#000000" aria-hidden="true"><path d="M55,37.8q1.34,1.34,1.33,5.42c0,2.68-.44,4.47-1.33,5.39S52.46,50,50.14,50h-11V36.46h11C52.46,36.46,54.06,36.91,55,37.8Z"/><path d="M0,4.5V92.86H88.36V4.5ZM64.15,51.75A13.65,13.65,0,0,1,58.3,57.1a19.13,19.13,0,0,1-8.56,1.84H39.17V72.25h-10V27.43H49.74a18.88,18.88,0,0,1,8.56,1.88,13.84,13.84,0,0,1,5.85,5.38,16.25,16.25,0,0,1,2.11,8.53A16.23,16.23,0,0,1,64.15,51.75Z"/><rect fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="9" x="96.06" y="4.5" width="88.36" height="88.36" rx="44.18"/><path d="M144.72,56.93h-9l-18-29.5h11.37l7,11.77L140,45.83h.66l3.82-6.63,7-11.77h11.17Zm.53,15.32h-10V50.44h10Z"/></svg><span style="font-size: 15px; font-weight: 700;">Mesa de redacción</span></div>
+    <nav aria-label="Panel" style="grid-column: span 6; display: flex; justify-content: flex-end; gap: 24px; font-size: 14px; font-weight: 500;"><a href="Main.dc.html">Ver la web</a><a href="#">Salir</a></nav>
+  </header>
+  <section style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 24px; padding: 48px 48px 40px; align-items: end;">
+    <div style="grid-column: span 8; display: flex; flex-direction: column; gap: 14px;">
+      <h1 style="margin: 0; font-size: 52px; line-height: 1; font-weight: 800; letter-spacing: -0.035em;">Buenos días, Andrew.</h1>
+      <p style="margin: 0; font-size: 18px; line-height: 1.4;">Tienes 4 propuestas nuevas y 2 artículos esperando tu “Por qué importa”.</p>
+      <div style="display: flex; gap: 8px; margin-top: 6px;"><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; background: #000000; color: #ffffff; padding: 6px 14px; font-size: 13px;">4 propuestas</span><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; background: #ffffff; padding: 6px 14px; font-size: 13px;">1 en preparación</span><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; background: #ffffff; padding: 6px 14px; font-size: 13px;">2 para revisar</span><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; background: #ffffff; padding: 6px 14px; font-size: 13px;">12 publicados</span></div>
+    </div>
+    <div style="grid-column: 10 / span 3; display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; border-color: #E4E4E0; background: #ffffff; font-weight: 500;"><span style="width: 7px; height: 7px; border-radius: 999px; background: #000000;"></span>Próximo radar: viernes, 9:00</span>
+      <button type="button" style="border: 1px solid #000000; border-radius: 999px; background: #ffffff; color: #000000; font-size: 14px; font-weight: 500; min-height: 44px; padding: 0 20px; cursor: pointer;">Buscar temas ahora</button>
+    </div>
+  </section>
+  <section style="padding: 0 48px 28px;">
+    <div style="background: #ffffff; border: 1px solid #E4E4E0; border-radius: 16px; padding: 16px; padding: 20px 24px; display: grid; grid-template-columns: 200px minmax(0, 1fr) minmax(0, 1fr) auto; column-gap: 32px; align-items: center;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700;">Portada</h2>
+        <p style="margin: 0; font-size: 13px; line-height: 1.45; color: #555555;">Los destacados no se repiten en la home. El resto sale por orden de publicación.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; align-self: flex-start; background: #000000; color: #ffffff; border-color: #000000;">Destacado 1, arriba</span>
+      <div style="display: grid; grid-template-columns: 136px minmax(0, 1fr); gap: 14px; align-items: center;">
+        <div style="height: 76px; border-radius: 10px; background: #B9B8B1;"></div>
+        <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+          <span style="font-size: 16px; font-weight: 750; line-height: 1.15; letter-spacing: -0.015em;">El rediseño que devuelve la vida a Phoenix Organics</span>
+          <select aria-label="Elegir destacado 1" style="font-family: inherit; font-size: 13px; border: 1px solid #000000; border-radius: 999px; padding: 8px 14px; background: #ffffff; min-height: 38px;"><option>El rediseño que devuelve la vida a Phoenix Organics</option></select>
+        </div>
+      </div>
+    </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; align-self: flex-start; background: #000000; color: #ffffff; border-color: #000000;">Destacado 2, a sangre</span>
+      <div style="display: grid; grid-template-columns: 136px minmax(0, 1fr); gap: 14px; align-items: center;">
+        <div style="height: 76px; border-radius: 10px; background: #D9D8D3;"></div>
+        <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+          <span style="font-size: 16px; font-weight: 750; line-height: 1.15; letter-spacing: -0.015em;">Cómo hacer evolucionar una marca mítica: el caso de Huckberry</span>
+          <select aria-label="Elegir destacado 2" style="font-family: inherit; font-size: 13px; border: 1px solid #000000; border-radius: 999px; padding: 8px 14px; background: #ffffff; min-height: 38px;"><option>Cómo hacer evolucionar una marca mítica: el caso de Huckberry</option></select>
+        </div>
+      </div>
+    </div>
+      <button type="button" style="border: 0; border-radius: 999px; background: #000000; color: #ffffff; font-size: 14px; font-weight: 700; min-height: 44px; padding: 0 20px; cursor: pointer;">Guardar portada</button>
+    </div>
+  </section>
+  <section style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 20px; padding: 8px 48px 64px; align-items: start;">
+    <div style="display: flex; flex-direction: column; gap: 14px;"><div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;"><h2 style="margin: 0; font-size: 15px; font-weight: 700;">Propuestas</h2><span style="min-width: 26px; height: 26px; border-radius: 999px; background: #000000; color: #ffffff; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; box-sizing: border-box;">4</span></div><article style="background: #ffffff; border: 1px solid #E4E4E0; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+  <div style="height: 150px; background: #D9D8D3; border-radius: 10px;"></div>
+  <div style="display: flex; justify-content: space-between; align-items: center;"><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600;">Branding</span><span style="font-size: 12px; color: #555555;">itsnicethat.com</span></div>
+  <h3 style="margin: 0; font-size: 19px; line-height: 1.12; font-weight: 750; letter-spacing: -0.02em;">Instagram hace su primer gran rediseño en más de diez años</h3>
+  <p style="margin: 0; font-size: 14px; line-height: 1.45; color: #333333;">Cómo se rediseña una marca que usan miles de millones de personas sin que nadie se sienta fuera.</p>
+  
+  <div style="display: flex; gap: 8px; margin-top: 4px;"><button type="button" style="border: 0; border-radius: 999px; background: #000000; color: #ffffff; font-size: 14px; font-weight: 700; min-height: 44px; padding: 0 20px; cursor: pointer; flex-grow: 1;">Sí, redactar</button><button type="button" style="border: 1px solid #000000; border-radius: 999px; background: #ffffff; color: #000000; font-size: 14px; font-weight: 500; min-height: 44px; padding: 0 20px; cursor: pointer;">No</button></div>
+</article><article style="background: #ffffff; border: 1px solid #E4E4E0; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+  <div style="height: 150px; background: #C9C8C2; border-radius: 10px;"></div>
+  <div style="display: flex; justify-content: space-between; align-items: center;"><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600;">Branding</span><span style="font-size: 12px; color: #555555;">itsnicethat.com</span></div>
+  <h3 style="margin: 0; font-size: 19px; line-height: 1.12; font-weight: 750; letter-spacing: -0.02em;">Manchester City Women estrena identidad propia</h3>
+  <p style="margin: 0; font-size: 14px; line-height: 1.45; color: #333333;">El deporte femenino deja de ser una variante del escudo masculino.</p>
+  
+  <div style="display: flex; gap: 8px; margin-top: 4px;"><button type="button" style="border: 0; border-radius: 999px; background: #000000; color: #ffffff; font-size: 14px; font-weight: 700; min-height: 44px; padding: 0 20px; cursor: pointer; flex-grow: 1;">Sí, redactar</button><button type="button" style="border: 1px solid #000000; border-radius: 999px; background: #ffffff; color: #000000; font-size: 14px; font-weight: 500; min-height: 44px; padding: 0 20px; cursor: pointer;">No</button></div>
+</article><article style="background: #ffffff; border: 1px solid #E4E4E0; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+  <div style="height: 150px; background: #E4E3DF; border-radius: 10px;"></div>
+  <div style="display: flex; justify-content: space-between; align-items: center;"><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600;">IA</span><span style="font-size: 12px; color: #555555;">yahoo.com</span></div>
+  <h3 style="margin: 0; font-size: 19px; line-height: 1.12; font-weight: 750; letter-spacing: -0.02em;">Adobe prepara Project Oasis, su herramienta de diseño web con IA</h3>
+  <p style="margin: 0; font-size: 14px; line-height: 1.45; color: #333333;">Una herramienta que entiende la marca: ¿alternativa o amenaza para quien diseña en Figma?</p>
+  <span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; align-self: flex-start; background: #000000; color: #ffffff; border-color: #000000;">Sin imágenes de prensa</span>
+  <div style="display: flex; gap: 8px; margin-top: 4px;"><button type="button" style="border: 0; border-radius: 999px; background: #000000; color: #ffffff; font-size: 14px; font-weight: 700; min-height: 44px; padding: 0 20px; cursor: pointer; flex-grow: 1;">Sí, redactar</button><button type="button" style="border: 1px solid #000000; border-radius: 999px; background: #ffffff; color: #000000; font-size: 14px; font-weight: 500; min-height: 44px; padding: 0 20px; cursor: pointer;">No</button></div>
+</article><article style="background: #ffffff; border: 1px solid #E4E4E0; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+  <div style="height: 150px; background: #D0CFC9; border-radius: 10px;"></div>
+  <div style="display: flex; justify-content: space-between; align-items: center;"><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600;">Diseño</span><span style="font-size: 12px; color: #555555;">itsnicethat.com</span></div>
+  <h3 style="margin: 0; font-size: 19px; line-height: 1.12; font-weight: 750; letter-spacing: -0.02em;">El Berlin Museum toma sus letras del metro de la ciudad</h3>
+  <p style="margin: 0; font-size: 14px; line-height: 1.45; color: #333333;">Tipografía de la calle convertida en la identidad de un museo.</p>
+  
+  <div style="display: flex; gap: 8px; margin-top: 4px;"><button type="button" style="border: 0; border-radius: 999px; background: #000000; color: #ffffff; font-size: 14px; font-weight: 700; min-height: 44px; padding: 0 20px; cursor: pointer; flex-grow: 1;">Sí, redactar</button><button type="button" style="border: 1px solid #000000; border-radius: 999px; background: #ffffff; color: #000000; font-size: 14px; font-weight: 500; min-height: 44px; padding: 0 20px; cursor: pointer;">No</button></div>
+</article></div>
+    <div style="display: flex; flex-direction: column; gap: 14px;"><div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;"><h2 style="margin: 0; font-size: 15px; font-weight: 700;">En preparación</h2><span style="min-width: 26px; height: 26px; border-radius: 999px; background: #000000; color: #ffffff; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; box-sizing: border-box;">1</span></div><article style="background: #ffffff; border: 1px solid #E4E4E0; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+  <div style="display: flex; justify-content: space-between; align-items: center;"><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600;">Branding</span><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; border-color: #E4E4E0; background: #F3F3F1;"><span style="width: 7px; height: 7px; border-radius: 999px; background: #000000;"></span>Redactando</span></div>
+  <h3 style="margin: 0; font-size: 19px; line-height: 1.12; font-weight: 750; letter-spacing: -0.02em;">Tinder se rediseña con la voz de una columnista de citas</h3>
+  <div style="height: 4px; border-radius: 999px; background: #E4E4E0;"><div style="width: 60%; height: 4px; border-radius: 999px; background: #000000;"></div></div>
+  <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px;"><li style="display: flex; gap: 10px; align-items: center;"><span style="display: inline-flex; width: 18px; height: 18px; border-radius: 999px; background: #000000; color: #ffffff; font-size: 10px; align-items: center; justify-content: center; flex-shrink: 0;">✓</span><span style="">Fuente original leída</span></li><li style="display: flex; gap: 10px; align-items: center;"><span style="display: inline-flex; width: 18px; height: 18px; border-radius: 999px; background: #000000; color: #ffffff; font-size: 10px; align-items: center; justify-content: center; flex-shrink: 0;">✓</span><span style="">Texto redactado</span></li><li style="display: flex; gap: 10px; align-items: center;"><span style="display: inline-flex; width: 18px; height: 18px; box-sizing: border-box; border-radius: 999px; border: 1.5px solid #000000; flex-shrink: 0;"></span><span style="font-weight: 700;">Descargando imágenes</span></li><li style="display: flex; gap: 10px; align-items: center;"><span style="display: inline-flex; width: 18px; height: 18px; box-sizing: border-box; border-radius: 999px; border: 1.5px solid #000000; flex-shrink: 0;"></span><span style="font-weight: 700;">Vista previa</span></li></ul>
+  <span style="font-size: 12px; color: #555555;">Empezó hace 4 min</span>
+  <a href="#" style="font-size: 13px; font-weight: 600; text-decoration: underline;">Ver lo que está haciendo Claude</a>
+</article><p style="margin: 0; padding: 0 4px; font-size: 13px; line-height: 1.5; color: #555555;">Claude investiga, redacta y prepara las fotos. Cuando termina, el artículo pasa a “Para revisar”.</p></div>
+    <div style="display: flex; flex-direction: column; gap: 14px;"><div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;"><h2 style="margin: 0; font-size: 15px; font-weight: 700;">Para revisar</h2><span style="min-width: 26px; height: 26px; border-radius: 999px; background: #000000; color: #ffffff; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; box-sizing: border-box;">2</span></div><article style="background: #ffffff; border: 1px solid #E4E4E0; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+  <div style="height: 170px; background: #B9B8B1; border-radius: 10px;"></div>
+  <div style="display: flex; justify-content: space-between; align-items: center;"><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600;">Branding</span><span style="font-size: 12px; color: #555555;">Listo hace 20 min</span></div>
+  <h3 style="margin: 0; font-size: 20px; line-height: 1.1; font-weight: 750; letter-spacing: -0.02em;">Sellos, etiquetas y códigos para una pizzería sobre ruedas</h3>
+  <a href="#" style="border: 1px solid #000000; border-radius: 999px; background: #ffffff; color: #000000; font-size: 14px; font-weight: 500; min-height: 44px; padding: 0 20px; cursor: pointer; align-self: flex-start; display: inline-flex; align-items: center; min-height: 36px; font-size: 13px; font-weight: 600;">Abrir vista previa</a>
+  <ul style="margin: 4px 0 0; padding: 14px; background: #F3F3F1; border-radius: 12px; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px;"><li style="display: flex; gap: 10px; align-items: center;"><span style="display: inline-flex; width: 18px; height: 18px; border-radius: 999px; background: #000000; color: #ffffff; font-size: 10px; align-items: center; justify-content: center; flex-shrink: 0;">✓</span><span style="">Fuentes verificadas</span></li><li style="display: flex; gap: 10px; align-items: center;"><span style="display: inline-flex; width: 18px; height: 18px; border-radius: 999px; background: #000000; color: #ffffff; font-size: 10px; align-items: center; justify-content: center; flex-shrink: 0;">✓</span><span style="">Imágenes, textos alternativos y créditos</span></li><li style="display: flex; gap: 10px; align-items: center;"><span style="display: inline-flex; width: 18px; height: 18px; border-radius: 999px; background: #000000; color: #ffffff; font-size: 10px; align-items: center; justify-content: center; flex-shrink: 0;">✓</span><span style="">Ficha completa</span></li><li style="display: flex; gap: 10px; align-items: center;"><span style="display: inline-flex; width: 18px; height: 18px; box-sizing: border-box; border-radius: 999px; border: 1.5px solid #000000; flex-shrink: 0;"></span><span style="font-weight: 700;">Tu “Por qué importa”</span></li></ul>
+  <label for="pqd" style="font-size: 13px; font-weight: 700; margin-top: 6px;">Por qué importa</label>
+  <textarea id="pqd" rows="5" placeholder="Tu lectura como diseñador. Escríbela o dicta tus notas: Claude las pule sin cambiar tu opinión." style="border: 1px solid #000000; border-radius: 12px; padding: 12px; font-family: inherit; font-size: 15px; line-height: 1.45; resize: vertical;"></textarea>
+  <label style="display: flex; gap: 8px; align-items: center; font-size: 13px;"><input type="checkbox" checked style="width: 16px; height: 16px; accent-color: #000000;">Pulir mi texto antes de publicar</label>
+  <div style="display: flex; gap: 8px;"><button type="button" style="border: 0; border-radius: 999px; background: #000000; color: #ffffff; font-size: 14px; font-weight: 700; min-height: 44px; padding: 0 20px; cursor: pointer; flex-grow: 1;">Publicar</button><button type="button" style="border: 1px solid #000000; border-radius: 999px; background: #ffffff; color: #000000; font-size: 14px; font-weight: 500; min-height: 44px; padding: 0 20px; cursor: pointer;">Pedir cambios</button></div>
+</article><article style="background: #ffffff; border: 1px solid #E4E4E0; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+  <div style="display: flex; justify-content: space-between; align-items: center;"><span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600;">IA</span><span style="font-size: 12px; color: #555555;">Listo ayer</span></div>
+  <h3 style="margin: 0; font-size: 17px; line-height: 1.15; font-weight: 750;">Figma abre su comunidad a las herramientas de Weave</h3>
+  <span style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #000000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; align-self: flex-start; border-style: dashed;">Falta tu “Por qué importa”</span>
+</article></div>
+    <div style="display: flex; flex-direction: column; gap: 16px;"><div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;"><h2 style="margin: 0; font-size: 15px; font-weight: 700;">Publicados</h2><span style="min-width: 26px; height: 26px; border-radius: 999px; background: #000000; color: #ffffff; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; box-sizing: border-box;">12</span></div><div style="background: #ffffff; border: 1px solid #E4E4E0; border-radius: 16px; padding: 16px; padding-top: 4px;"><ul style="margin: 0; padding: 0; list-style: none;"><li style="display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-bottom: 1px solid #E4E4E0;"><a href="#" style="font-size: 15px; font-weight: 700; line-height: 1.2;">El rediseño que devuelve la vida a Phoenix Organics</a><span style="font-size: 12px; color: #555555;">27.05.2026</span></li><li style="display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-bottom: 1px solid #E4E4E0;"><a href="#" style="font-size: 15px; font-weight: 700; line-height: 1.2;">Cómo hacer evolucionar una marca mítica: el caso de Huckberry</a><span style="font-size: 12px; color: #555555;">28.05.2026</span></li><li style="display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-bottom: 1px solid #E4E4E0;"><a href="#" style="font-size: 15px; font-weight: 700; line-height: 1.2;">Bondi: cuando lo cotidiano se vuelve geometría</a><span style="font-size: 12px; color: #555555;">28.05.2026</span></li><li style="display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-bottom: 1px solid #E4E4E0;"><a href="#" style="font-size: 15px; font-weight: 700; line-height: 1.2;">Omnibite: ramas caídas convertidas en muebles</a><span style="font-size: 12px; color: #555555;">28.05.2026</span></li><li style="display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-bottom: 1px solid #E4E4E0;"><a href="#" style="font-size: 15px; font-weight: 700; line-height: 1.2;">Gatorade y Adobe: botellas únicas creadas con IA</a><span style="font-size: 12px; color: #555555;">27.05.2026</span></li></ul><a href="#" style="display: inline-block; font-size: 13px; font-weight: 600; text-decoration: underline; margin-top: 12px;">Ver todos</a></div></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2300}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
