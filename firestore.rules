@@ -1,48 +1,121 @@
 rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PeoplePick — reglas de Firestore
+//
+// Un voto por cuenta y persona, sin servidor:
+//   · Para votar hay que entrar con una cuenta (Google).
+//   · Cada voto es un documento /votes/{uid}_{personId} con value = 1 (sube) o -1 (baja).
+//     Solo puede existir uno por cuenta y persona porque el id lo fija la propia cuenta.
+//   · El marcador público vive en /stats/votes (un mapa counts[personId]).
+//   · Votar es una escritura atómica de DOS documentos (el voto y el marcador).
+//     Las reglas de cada uno comprueban al otro: el marcador solo puede moverse
+//     exactamente lo que cambia el voto de esa cuenta, y el voto no se acepta
+//     si el marcador no se mueve a la vez. Nadie puede inflar el contador.
+// ─────────────────────────────────────────────────────────────────────────────
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── People (ranking público) ──────────────────────────────────────────
-    // Lectura: cualquiera
-    // Escritura: solo desde el backend (ningún cliente escribe directamente)
-    //            Los votos se gestionan vía la colección /votes
-    match /people/{personId} {
-      allow read: if true;
-      // No se permite crear/editar personas desde el cliente público
-      allow write: if false;
-    }
+    function signedIn() { return request.auth != null; }
+    function isAdmin()  { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
 
-    // ── Events (grupos de votación: elecciones, temporadas, debates eternos) ──
-    // Lectura pública; solo se crean/editan desde el backend (seed-v2.js o panel admin)
-    match /events/{eventId} {
-      allow read: if true;
-      allow write: if false;
-    }
+    function statsPath()        { return /databases/$(database)/documents/stats/votes; }
+    function votePath(voteId)   { return /databases/$(database)/documents/votes/$(voteId); }
+    function countBefore(pid)   { return get(statsPath()).data.counts.get(pid, 0); }
+    function countAfter(pid)    { return getAfter(statsPath()).data.counts.get(pid, 0); }
+    function voteBefore(voteId) { return exists(votePath(voteId)) ? get(votePath(voteId)).data.value : 0; }
+    function voteAfter(voteId)  { return existsAfter(votePath(voteId)) ? getAfter(votePath(voteId)).data.value : 0; }
+    function validPersonId(pid) { return pid is string && pid.matches('^[a-z0-9-]{1,80}$'); }
 
-    // ── Votes ─────────────────────────────────────────────────────────────
-    // El ID del documento es siempre "{fp}_{personId}"
-    // Un fingerprint solo puede leer/escribir sus propios votos
+    // ── Votos ────────────────────────────────────────────────────────────────
     match /votes/{voteId} {
-      allow read:   if true;
-      allow create: if request.resource.data.fp is string
-                    && request.resource.data.personId is string
-                    && request.resource.data.type in ['up', 'down']
-                    && voteId == request.resource.data.fp + '_' + request.resource.data.personId;
-      allow update: if request.resource.data.fp == resource.data.fp
-                    && request.resource.data.type in ['up', 'down'];
-      allow delete: if true; // permite deshacer voto
+      // Cada cuenta solo ve sus propios votos (privacidad)
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'personId', 'value', 'at'])
+        && request.resource.data.uid == request.auth.uid
+        && validPersonId(request.resource.data.personId)
+        && voteId == request.auth.uid + '_' + request.resource.data.personId
+        && request.resource.data.value in [1, -1]
+        && request.resource.data.at == request.time
+        && countAfter(request.resource.data.personId)
+             == countBefore(request.resource.data.personId) + request.resource.data.value;
+
+      // Cambiar de "sube" a "baja" o al revés
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'personId', 'value', 'at'])
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.personId == resource.data.personId
+        && request.resource.data.value in [1, -1]
+        && request.resource.data.value != resource.data.value
+        && request.resource.data.at == request.time
+        && countAfter(resource.data.personId)
+             == countBefore(resource.data.personId) + request.resource.data.value - resource.data.value;
+
+      // Quitar el voto
+      allow delete: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && countAfter(resource.data.personId)
+             == countBefore(resource.data.personId) - resource.data.value;
     }
 
-    // ── Pending (sugerencias) ─────────────────────────────────────────────
-    // Cualquiera puede crear — nadie puede leer/editar/borrar excepto admin
-    // (el panel de admin usa el SDK admin o reglas permisivas para lectura)
+    // ── Marcador público ────────────────────────────────────────────────────
+    // counts: { personId: número }   last: { uid, pid }  (qué voto acompaña a la escritura)
+    match /stats/votes {
+      allow read: if true;
+      allow create, delete: if false;   // lo crea scripts/setup-firestore.js
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['counts', 'last'])
+        && request.resource.data.last.keys().hasOnly(['uid', 'pid'])
+        && request.resource.data.last.uid == request.auth.uid
+        && validPersonId(request.resource.data.last.pid)
+        && request.resource.data.counts.diff(resource.data.counts).affectedKeys()
+             .hasOnly([request.resource.data.last.pid])
+        && request.resource.data.counts.get(request.resource.data.last.pid, 0)
+             == resource.data.counts.get(request.resource.data.last.pid, 0)
+                + voteAfter(request.auth.uid + '_' + request.resource.data.last.pid)
+                - voteBefore(request.auth.uid + '_' + request.resource.data.last.pid);
+    }
+
+    // ── Admins ──────────────────────────────────────────────────────────────
+    // Se dan de alta con scripts/setup-firestore.js --admin tu@email.com
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ── Personas añadidas desde el panel (las demás vienen de data/people.json) ──
+    match /extraPeople/{personId} {
+      allow read: if true;
+      allow write: if isAdmin() && validPersonId(personId);
+    }
+
+    // ── Configuración (personas ocultas, eventos de portada) ────────────────
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Sugerencias ─────────────────────────────────────────────────────────
     match /pending/{docId} {
-      allow read:   if true;   // simplificado — en producción restringir por IP/admin token
-      allow create: if request.resource.data.name is string
-                    && request.resource.data.name.size() > 1
-                    && request.resource.data.name.size() < 100;
+      allow read, delete: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['name', 'category', 'uid', 'at'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 1
+        && request.resource.data.name.size() < 100
+        && request.resource.data.category is string
+        && request.resource.data.category.size() < 40
+        && request.resource.data.at == request.time;
       allow update: if false;
-      allow delete: if true;   // el panel admin borra al aprobar/rechazar
+    }
+
+    // Todo lo demás, cerrado
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
