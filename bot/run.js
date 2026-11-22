@@ -39,6 +39,7 @@ async function main() {
 
   for (const trend of trends) {
     const m = matchTrend(trend, index);
+    log(`  · «${trend.title}»${m ? ` → ${m.person.name}` : ""}`);
     if (!m) continue;
     const person = m.person;
     if (seen.has(person.id)) continue;
@@ -59,6 +60,18 @@ async function main() {
     log(`✓ ${person.name} ← «${trend.title}»`);
   }
 
+  // ── Demo: tarjetas de personas elegidas aunque no sean tendencia (nunca se envían) ──
+  for (const id of (process.env.BOT_DEMO || "").split(",").map(s => s.trim()).filter(Boolean)) {
+    const person = people.find(p => p.id === id);
+    if (!person) { log(`· Demo: no existe ${id}`); continue; }
+    const trend = { title: person.name, traffic: "", news: [{ title: `${person.sub}`, source: "demo", url: "" }] };
+    const ranking = rankingFor(person, people, counts);
+    const photo = await fetchPhoto(person);
+    log(`· Demo ${person.name}: foto ${photo ? `sí (${photo.credit})` : "no"}`);
+    proposals.push({ person, trend, ranking, tweet: composeTweet(person, trend, ranking, proposals.length),
+      reply: composeReply(person), png: await renderCard(person, ranking, photo), how: "demo", demo: true });
+  }
+
   // ── Previsualización ───────────────────────────────────────────────────────
   mkdirSync(OUT, { recursive: true });
   proposals.forEach(p => writeFileSync(new URL(`${p.person.id}.png`, OUT), p.png));
@@ -71,10 +84,13 @@ async function main() {
   log(`· Previsualización: bot/out/preview.html (${proposals.length} propuestas, ${discarded.length} descartadas)`);
 
   // ── Envío a Telegram (solo en modo activo) ────────────────────────────────
-  if (ACTIVE && proposals.length) {
+  writeSummary(trends, proposals, discarded);
+
+  const real = proposals.filter(p => !p.demo);
+  if (ACTIVE && real.length) {
     const token = process.env.TELEGRAM_BOT_TOKEN, chat = process.env.TELEGRAM_CHAT_ID;
     if (!token || !chat) throw new Error("Faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID");
-    for (const p of proposals) {
+    for (const p of real) {
       await telegramPhoto(token, chat, p.png, `${p.tweet.text}`);
       await telegramText(token, chat, `Respuesta al tuit (publícala unos minutos después):\n\n${p.reply.text}`);
       state.posts.push({ personId: p.person.id, trend: p.trend.title, at: new Date().toISOString() });
@@ -83,6 +99,20 @@ async function main() {
     writeFileSync(STATE_FILE, JSON.stringify(state, null, 2) + "\n");
     log(`· Enviado a Telegram y guardado en bot/state.json`);
   }
+}
+
+// Resumen legible en la página de la ejecución de GitHub Actions
+function writeSummary(trends, proposals, discarded) {
+  const f = process.env.GITHUB_STEP_SUMMARY;
+  if (!f) return;
+  const img = id => `https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/bot-preview/${id}.png`;
+  let md = `## PeoplePick · ${ACTIVE ? "modo activo" : "simulación"}\n\n${trends.length} tendencias revisadas · ${proposals.length} propuestas · ${discarded.length} descartadas\n\n`;
+  for (const p of proposals) {
+    md += `### ${p.demo ? "[DEMO] " : ""}${p.person.name}\n\n![tarjeta](${img(p.person.id)})\n\n**Tuit:** ${p.tweet.text}\n\n**Respuesta:** ${p.reply.text}\n\n`;
+  }
+  if (discarded.length) md += `### Descartadas\n\n${discarded.map(d => `- **${d.person}** · «${d.trend}» → ${d.reason}`).join("\n")}\n\n`;
+  md += `### Tendencias revisadas\n\n${trends.map(t => `- ${t.title}${t.traffic ? ` (${t.traffic})` : ""}`).join("\n")}\n`;
+  writeFileSync(f, md, { flag: "a" });
 }
 
 async function telegramPhoto(token, chat, png, caption) {

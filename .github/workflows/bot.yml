@@ -9,6 +9,9 @@ on:
       modo:
         description: "simulacion o activo"
         default: "simulacion"
+      demo:
+        description: "ids de personas para tarjetas de prueba (ej: rosalia,pedro-sanchez)"
+        default: ""
 permissions:
   contents: write
 concurrency: { group: bot, cancel-in-progress: false }
@@ -27,11 +30,17 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BOT_DEMO: ${{ github.event_name == 'push' && 'rosalia,alberto-nunez-feijoo,lamine-yamal' || github.event.inputs.demo || vars.BOT_DEMO }}
         run: node bot/run.js
-      - name: Guardar la previsualización
+      - name: Publicar la previsualización en la rama bot-preview
         if: always()
-        uses: actions/upload-artifact@v4
-        with: { name: previsualizacion, path: bot/out/, retention-days: 7 }
+        run: |
+          [ -d bot/out ] || exit 0
+          cd bot/out
+          git init -q -b bot-preview
+          git config user.name "peoplepick-bot"; git config user.email "peoplepick-bot@users.noreply.github.com"
+          git add -A && git commit -qm "Previsualización $(date -u +%F' '%H:%M) UTC"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" bot-preview
       - name: Guardar el historial (evita repetir personas)
         run: |
           if ! git diff --quiet bot/state.json; then
