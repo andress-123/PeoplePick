@@ -3,9 +3,9 @@ import { ChevronUp, ChevronDown, Search, Plus, X, ArrowUpDown, ArrowUp, CheckCir
 import PEOPLE_DATA from "../data/people.json";
 import EVENTS_DATA from "../data/events.json";
 import { db, auth, googleProvider, firebaseReady } from "./firebase.js";
-import { applyVote, nextValue, VALUE } from "./voteOps.js";
+import { applyVote, nextValue, VALUE, ANON_LIMIT } from "./voteOps.js";
 import { doc, onSnapshot, collection, query, where, getDocs, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
-import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
+import { onAuthStateChanged, signInWithPopup, signInAnonymously, linkWithPopup, signInWithCredential, GoogleAuthProvider, signOut } from "firebase/auth";
 
 // Los votos ya no son de ejemplo: vienen de Firestore (stats/votes).
 
@@ -230,7 +230,7 @@ function DetailPanel({ person, rank, voteState, onVote, onClose, onShare }) {
             <ChevronDown size={20}/> Bajar
           </button>
         </div>
-        <p style={{textAlign:"center",fontSize:12,color:"#94a3b8",margin:"14px 0 0"}}>Un voto por cuenta.{" "}
+        <p style={{textAlign:"center",fontSize:12,color:"#94a3b8",margin:"14px 0 0"}}>Un voto por persona.{" "}
           <button onClick={onShare} style={{border:"none",background:"none",color:"#2563eb",fontWeight:600,fontSize:12,cursor:"pointer",padding:0}}>Copiar enlace</button>
         </p>
       </div>
@@ -464,7 +464,8 @@ export default function App() {
   const [user,          setUser]          = useState(null);
   const [isAdmin,       setIsAdmin]       = useState(false);
   const [pending,       setPending]       = useState([]);
-  const [loginOpen,     setLoginOpen]     = useState(false);
+  const [loginOpen,     setLoginOpen]     = useState(false); // false | "limit" | "suggest"
+  const [myCount,       setMyCount]       = useState(0);     // personas votadas por esta sesión
   const [toast,         setToast]         = useState("");
   const people = useMemo(()=>[...BASE_PEOPLE, ...extra]
     .filter(p=>!hidden[p.id])
@@ -538,6 +539,7 @@ export default function App() {
   // ── Firebase: marcador, personas extra, ocultas, sesión ─────────────────
   const votesRef = useRef({}); votesRef.current = votes;
   const userRef  = useRef(null); userRef.current = user;
+  const myCountRef = useRef(0); myCountRef.current = myCount;
   const inFlight = useRef({});
   const pendingVote = useRef(null);
   const toastTimer = useRef(null);
@@ -557,7 +559,7 @@ export default function App() {
   // Al entrar: cargar mis votos y si soy admin
   useEffect(()=>{
     if(!firebaseReady) return;
-    if(!user){ setVotes({}); setIsAdmin(false); return; }
+    if(!user){ setVotes({}); setIsAdmin(false); setMyCount(0); return; }
     let dead=false;
     getDocs(query(collection(db,"votes"), where("uid","==",user.uid))).then(q=>{
       if(dead) return;
@@ -566,7 +568,8 @@ export default function App() {
       if(pendingVote.current){ const {id,dir}=pendingVote.current; pendingVote.current=null; voteRef.current(id,dir); }
     }).catch(()=>{});
     getDoc(doc(db,"admins",user.uid)).then(d=>!dead&&setIsAdmin(d.exists())).catch(()=>{});
-    return ()=>{dead=true;};
+    const offCount = onSnapshot(doc(db,"users",user.uid), d=>!dead&&setMyCount(d.data()?.n||0), ()=>{});
+    return ()=>{dead=true; offCount();};
   },[user]);
 
   useEffect(()=>{
@@ -574,28 +577,54 @@ export default function App() {
     return onSnapshot(collection(db,"pending"), q=>setPending(q.docs.map(d=>({id:d.id,...d.data()}))), ()=>{});
   },[isAdmin]);
 
+  // Entrar con Google. Si ya votaba sin cuenta, se vincula esa misma sesión y conserva sus votos.
   const login = useCallback(async()=>{
-    try { await signInWithPopup(auth, googleProvider); setLoginOpen(false); }
+    try {
+      const cur = auth.currentUser;
+      if (cur?.isAnonymous) {
+        try { await linkWithPopup(cur, googleProvider); await cur.getIdToken(true); setUser({...cur}); }
+        catch(e){
+          if (e?.code !== "auth/credential-already-in-use") throw e;
+          // Esa cuenta de Google ya existía: se entra con ella (los votos anónimos se quedan en el marcador)
+          await signInWithCredential(auth, GoogleAuthProvider.credentialFromError(e));
+        }
+      } else {
+        await signInWithPopup(auth, googleProvider);
+      }
+      setLoginOpen(false);
+      if (pendingVote.current && auth.currentUser && !auth.currentUser.isAnonymous && userRef.current?.uid === auth.currentUser.uid) {
+        const {id,dir}=pendingVote.current; pendingVote.current=null; setTimeout(()=>voteRef.current(id,dir),0);
+      }
+    }
     catch(e){ if(e?.code!=="auth/popup-closed-by-user" && e?.code!=="auth/cancelled-popup-request") showToast("No se pudo iniciar sesión. Inténtalo de nuevo."); }
   },[showToast]);
 
   // Un voto por cuenta y persona. La misma flecha quita el voto; la otra lo cambia.
   const handleVote = useCallback(async (id,dir)=>{
     if(!firebaseReady){ showToast("La votación todavía no está conectada."); return; }
-    if(!userRef.current){ pendingVote.current={id,dir}; setLoginOpen(true); return; }
     if(inFlight.current[id]) return;
-    const uid=userRef.current.uid;
+    let u = auth.currentUser;
+    if(!u){
+      try { inFlight.current[id]=true; u = (await signInAnonymously(auth)).user; userRef.current = u; setUser(u); }
+      catch(e){ showToast("No se pudo votar. Inténtalo de nuevo."); return; }
+      finally { inFlight.current[id]=false; }
+    }
+    const uid=u.uid;
     const curDir=votesRef.current[id]||null;
     const cur=curDir?VALUE[curDir]:0;
     const nxt=nextValue(cur,dir);
+    // Sin cuenta: hasta ANON_LIMIT personas. Cambiar o quitar un voto no gasta.
+    if(u.isAnonymous && cur===0 && myCountRef.current>=ANON_LIMIT){ pendingVote.current={id,dir}; setLoginOpen("limit"); return; }
     const nxtDir= nxt===1?"up":nxt===-1?"down":null;
     inFlight.current[id]=true;
     setVotes(v=>{ const n={...v}; if(nxtDir) n[id]=nxtDir; else delete n[id]; votesRef.current=n; return n; });
     setPulse(prev=>({...prev,[id]:true}));
     setTimeout(()=>setPulse(prev=>({...prev,[id]:false})),350);
+    if(cur===0 && nxt!==0) { myCountRef.current+=1; setMyCount(c=>c+1); }
     try { await applyVote(db,uid,id,cur,nxt); }
     catch(e){
       setVotes(v=>{ const n={...v}; if(curDir) n[id]=curDir; else delete n[id]; votesRef.current=n; return n; });
+      if(cur===0 && nxt!==0) { myCountRef.current-=1; setMyCount(c=>Math.max(0,c-1)); }
       showToast("No se pudo guardar el voto. Inténtalo de nuevo.");
     }
     finally { inFlight.current[id]=false; }
@@ -608,8 +637,8 @@ export default function App() {
     const dupe=people.find(p=>sim(p.name,clean)>0.75);
     if(dupe){setDupWarn(dupe.name);return;}
     if(!firebaseReady){ showToast("Las sugerencias todavía no están conectadas."); return; }
-    if(!userRef.current){ setLoginOpen(true); return; }
-    addDoc(collection(db,"pending"),{name:clean,category:sugCat,uid:userRef.current.uid,at:serverTimestamp()})
+    (auth.currentUser ? Promise.resolve(auth.currentUser) : signInAnonymously(auth).then(r=>r.user))
+      .then(u=>addDoc(collection(db,"pending"),{name:clean,category:sugCat,uid:u.uid,at:serverTimestamp()}))
       .catch(()=>showToast("No se pudo enviar la sugerencia."));
     setSugDone(true);
     setTimeout(()=>{setSuggest(false);setSugDone(false);setSugName("");setDupWarn(null);},2000);
@@ -822,7 +851,12 @@ export default function App() {
       <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:90,height:36,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px",borderTop:"1px solid #f1f5f9",background:"rgba(255,255,255,0.9)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
         <span style={{fontSize:11,color:"#c4c9d4",fontWeight:400}}>© 2025 Andrés Mateos</span>
         <div style={{display:"flex",alignItems:"center",gap:14}}>
-        {user && (
+        {user?.isAnonymous && firebaseReady && (
+          <button onClick={()=>setLoginOpen("save")} style={{fontSize:11,color:"#c4c9d4",fontWeight:500,border:"none",background:"transparent",cursor:"pointer",padding:"4px 0"}}>
+            Guardar mis votos con Google
+          </button>
+        )}
+        {user && !user.isAnonymous && (
           <button onClick={()=>signOut(auth)} style={{fontSize:11,color:"#c4c9d4",fontWeight:500,border:"none",background:"transparent",cursor:"pointer",padding:"4px 0"}}>
             Salir ({user.displayName?.split(" ")[0] || "cuenta"})
           </button>
@@ -898,8 +932,10 @@ export default function App() {
         <div style={{position:"fixed",inset:0,zIndex:160,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.3)",backdropFilter:"blur(4px)",padding:"0 16px"}} onClick={e=>{if(e.target===e.currentTarget){setLoginOpen(false);pendingVote.current=null;}}}>
           <div className="fu" style={{background:"#fff",borderRadius:24,padding:28,width:"100%",maxWidth:360,boxShadow:"0 8px 40px rgba(0,0,0,0.12)"}}>
             <div style={{width:10,height:10,borderRadius:"50%",background:"#2563eb",marginBottom:14}}/>
-            <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 6px",letterSpacing:-.4}}>Entra para votar</h2>
-            <p style={{color:"#64748b",fontSize:14,lineHeight:1.5,margin:"0 0 20px"}}>Cada cuenta tiene un solo voto por persona. Así el ranking es de verdad. Tus votos no son públicos.</p>
+            <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 6px",letterSpacing:-.4}}>{loginOpen==="limit" ? "Sigue votando con Google" : "Guarda tus votos"}</h2>
+            <p style={{color:"#64748b",fontSize:14,lineHeight:1.5,margin:"0 0 20px"}}>{loginOpen==="limit"
+              ? `Ya has votado a ${ANON_LIMIT} personas sin cuenta. Entra con Google para seguir: los votos que has hecho se guardan y nadie más los ve.`
+              : "Entra con Google para conservar tus votos en cualquier dispositivo y votar sin límite. Nadie más ve a quién votas."}</p>
             <button onClick={login} style={{width:"100%",padding:"13px 0",borderRadius:999,border:"1px solid #e2e8f0",background:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,color:"#09090b"}}>
               <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
               Continuar con Google

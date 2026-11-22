@@ -1,11 +1,13 @@
 # Activar PeoplePick: votos reales y bot de tendencias
 
+**Cómo se vota:** cualquiera vota a 3 personas sin cuenta, al instante. Para votar a más, entra con Google y conserva lo que ya votó. Cada sesión o cuenta tiene un solo voto por persona; cambiarlo o quitarlo no gasta. El límite lo aplican las reglas de Firestore, así que no se salta desde fuera de la web.
+
 Hazlo en este orden. Son unos 30 minutos la primera vez.
 
 ## 1. Firebase (votos reales, un voto por cuenta)
 
 1. **Firestore.** En [console.firebase.google.com](https://console.firebase.google.com) abre el proyecto `peoplepick-d8937` → *Firestore Database*. Si no existe, créala en modo producción, ubicación `eur3`.
-2. **Login con Google.** *Authentication* → *Sign-in method* → activa **Google**. En *Settings → Authorized domains* añade `people-pick-lsy9.vercel.app` (y tu dominio propio si lo tienes).
+2. **Acceso.** *Authentication* → *Sign-in method* → activa **Anónimo** (para los 3 primeros votos sin cuenta) y **Google** (para seguir votando). En *Settings → Authorized domains* añade `people-pick-lsy9.vercel.app` (y tu dominio propio si lo tienes).
 3. **Reglas.** En la terminal, dentro del proyecto:
    ```bash
    npx firebase login
@@ -16,7 +18,7 @@ Hazlo en este orden. Son unos 30 minutos la primera vez.
    node scripts/setup-firestore.js
    ```
 5. **Variables en Vercel.** *Project → Settings → Environment Variables*: añade las seis `VITE_FIREBASE_*` (las mismas de tu `.env.local`). Copia también el `.env.local` a esta carpeta para probar en local.
-6. **Tu cuenta de admin.** Entra en la web, vota cualquier cosa con tu Google y luego:
+6. **Tu cuenta de admin.** En la web, pulsa "Guardar mis votos con Google" en el pie (aparece tras votar) y entra con tu cuenta. Luego:
    ```bash
    node scripts/setup-firestore.js --admin tu@gmail.com
    ```
@@ -24,7 +26,7 @@ Hazlo en este orden. Son unos 30 minutos la primera vez.
 
 **Opcional, recomendado cuando haya tráfico: App Check.** Bloquea scripts que no vienen de tu web. Crea una clave reCAPTCHA v3 en Firebase (*App Check → Registrar app web*), añade `VITE_RECAPTCHA_SITE_KEY` en Vercel y, tras unos días en modo monitorización, pulsa *Enforce* para Firestore.
 
-**Comprobación automática.** Cada vez que cambien las reglas, GitHub ejecuta 14 pruebas que intentan votar sin cuenta, votar dos veces, inflar el marcador o votar por otro. Tienen que salir en verde (pestaña *Actions → Reglas de Firestore*).
+**Comprobación automática.** Cada vez que cambien las reglas, GitHub ejecuta 17 pruebas que intentan votar dos veces, inflar el marcador, votar por otro, pasarse del límite sin cuenta o trucar el contador. Tienen que salir en verde (pestaña *Actions → Reglas de Firestore*).
 
 ## 2. Bot de tendencias (simulación)
 
