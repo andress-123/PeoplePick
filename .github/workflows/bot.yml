@@ -1,0 +1,39 @@
+name: Bot de tendencias
+on:
+  schedule:
+    - cron: "17 7-22 * * *"   # cada hora de 8:17 a 23:17 (hora peninsular en invierno)
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "simulacion o activo"
+        default: "simulacion"
+permissions:
+  contents: write
+concurrency: { group: bot, cancel-in-progress: false }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - name: Ejecutar el bot
+        env:
+          BOT_MODE: ${{ github.event.inputs.modo || vars.BOT_MODE || 'simulacion' }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node bot/run.js
+      - name: Guardar la previsualización
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: previsualizacion, path: bot/out/, retention-days: 7 }
+      - name: Guardar el historial (evita repetir personas)
+        run: |
+          if ! git diff --quiet bot/state.json; then
+            git config user.name "peoplepick-bot"
+            git config user.email "peoplepick-bot@users.noreply.github.com"
+            git add bot/state.json && git commit -m "bot: historial de publicaciones" && git push
+          fi

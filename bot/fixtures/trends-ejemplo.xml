@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Datos de PRUEBA inventados con el formato del RSS de Google Trends. Solo para probar el bot sin red. -->
+<rss xmlns:ht="https://trends.google.com/trending/rss" version="2.0"><channel>
+<item><title>Feijóo</title><ht:approx_traffic>200K+</ht:approx_traffic>
+  <ht:news_item><ht:news_item_title>Feijóo y Sánchez cruzan acusaciones en el último debate antes del 29N - El Periódico</ht:news_item_title><ht:news_item_source>El Periódico</ht:news_item_source><ht:news_item_url>https://example.com/a</ht:news_item_url></ht:news_item>
+</item>
+<item><title>Rosalía</title><ht:approx_traffic>100K+</ht:approx_traffic>
+  <ht:news_item><ht:news_item_title>Rosalía anuncia nuevas fechas de su gira en Madrid y Barcelona</ht:news_item_title><ht:news_item_source>El País</ht:news_item_source><ht:news_item_url>https://example.com/b</ht:news_item_url></ht:news_item>
+</item>
+<item><title>mourinho flick</title><ht:approx_traffic>50K+</ht:approx_traffic>
+  <ht:news_item><ht:news_item_title>Mourinho responde a Flick a una semana del Clásico</ht:news_item_title><ht:news_item_source>Marca</ht:news_item_source><ht:news_item_url>https://example.com/c</ht:news_item_url></ht:news_item>
+</item>
+<item><title>Camarón de la Isla</title><ht:approx_traffic>20K+</ht:approx_traffic>
+  <ht:news_item><ht:news_item_title>Se cumplen 34 años de la muerte de Camarón</ht:news_item_title><ht:news_item_source>ABC</ht:news_item_source><ht:news_item_url>https://example.com/d</ht:news_item_url></ht:news_item>
+</item>
+<item><title>Black Friday</title><ht:approx_traffic>500K+</ht:approx_traffic></item>
+<item><title>Broncano</title><ht:approx_traffic>20K+</ht:approx_traffic>
+  <ht:news_item><ht:news_item_title>Broncano y Motos vuelven a pelear por la audiencia del jueves</ht:news_item_title><ht:news_item_source>Vertele</ht:news_item_source><ht:news_item_url>https://example.com/e</ht:news_item_url></ht:news_item>
+</item>
+</channel></rss>
