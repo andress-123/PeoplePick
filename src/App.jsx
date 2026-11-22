@@ -500,9 +500,7 @@ function AdminPanel({ people, onClose, onAdd, onDelete }) {
 export default function App() {
   const [people,        setPeople]        = useState(INITIAL_PEOPLE);
   const [scope,         setScope]         = useState("general"); // "general" o id de evento
-  const [evCounts,      setEvCounts]      = useState({});        // votos por evento: {eventId:{personId:n}}
-  const scopeRef = useRef("general"); scopeRef.current = scope;
-  const vkey = id => scope==="general" ? id : `${scope}:${id}`;
+  const vkey = id => id; // los eventos usan los mismos votos que la lista general
   const [votes,         setVotes]         = useState({});
   const [pulse,         setPulse]         = useState({});
   const [filterCat,     setFilterCat]     = useState("All");
@@ -541,7 +539,7 @@ export default function App() {
     let list = people;
     if (activeEvent) {
       const byId = Object.fromEntries(people.map(p=>[p.id,p]));
-      list = activeEvent.people.map(id=>byId[id]).filter(Boolean).map(p=>({...p,votes:evCounts[scope]?.[p.id]||0}));
+      list = activeEvent.people.map(id=>byId[id]).filter(Boolean); // mismos votos que en General
     } else {
       if (filterCat     !== "All") list = list.filter(p=>p.category===filterCat);
       if (filterCountry !== "All") list = list.filter(p=>p.country===filterCountry);
@@ -549,7 +547,7 @@ export default function App() {
     list = [...list].sort((a,b)=>sortOrder==="most_voted"?b.votes-a.votes:a.votes-b.votes);
     let rank=1;
     return list.map((p,i)=>{ if(i>0&&p.votes!==list[i-1].votes) rank=i+1; return{...p,rank:p.votes===0?i+1:rank}; });
-  },[people,filterCat,filterCountry,sortOrder,scope,evCounts,activeEvent]);
+  },[people,filterCat,filterCountry,sortOrder,activeEvent]);
 
   const searchRes = useMemo(()=>{
     if(!searchQ.trim()) return [];
@@ -571,8 +569,7 @@ export default function App() {
   const scrollRef = useRef(()=>{}); scrollRef.current = scrollToItem;
 
   const handleVote = useCallback((id,dir)=>{
-    const sc = scopeRef.current;
-    const key = sc==="general" ? id : `${sc}:${id}`;
+    const key = id;
     setVotes(prev=>{
       const cur=prev[key];
       let delta=0, next={...prev};
@@ -589,8 +586,7 @@ export default function App() {
         delta = dir==="up" ? 1 : -1;
         next[key]=dir;
       }
-      if (sc==="general") setPeople(ps=>ps.map(p=>p.id===id?{...p,votes:p.votes+delta}:p));
-      else setEvCounts(ec=>({...ec,[sc]:{...(ec[sc]||{}),[id]:((ec[sc]||{})[id]||0)+delta}}));
+      setPeople(ps=>ps.map(p=>p.id===id?{...p,votes:p.votes+delta}:p));
       return next;
     });
     setPulse(prev=>({...prev,[id]:true}));
@@ -706,12 +702,13 @@ export default function App() {
           ))}
         </div>
 
-        {/* FILTERS (solo en la lista general) / pregunta del evento */}
+        {/* FILTERS (solo en la lista general) */}
         <div style={{maxWidth:672,margin:"0 auto",padding:"4px 16px 8px",display:"flex",alignItems:"center",gap:8,minHeight:34}}>
           {activeEvent ? (
-            <p style={{margin:0,fontSize:13,fontWeight:500,color:"#64748b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
-              {activeEvent.questionEs}
-            </p>
+            <button onClick={()=>setSortOrder(o=>o==="most_voted"?"least_voted":"most_voted")}
+              style={{padding:"4px 6px",borderRadius:"50%",border:"1px solid #e2e8f0",background:"transparent",cursor:"pointer",color:"#94a3b8",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <ArrowUpDown size={12}/>
+            </button>
           ) : (<>
           <button onClick={()=>setSortOrder(o=>o==="most_voted"?"least_voted":"most_voted")}
             style={{padding:"4px 6px",borderRadius:"50%",border:"1px solid #e2e8f0",background:"transparent",cursor:"pointer",color:"#94a3b8",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
