@@ -2,56 +2,17 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { ChevronUp, ChevronDown, Search, Plus, X, ArrowUpDown, ArrowUp, CheckCircle2, AlertCircle, Shield, Check, Trash2 } from "lucide-react";
 import PEOPLE_DATA from "../data/people.json";
 import EVENTS_DATA from "../data/events.json";
+import { db, auth, googleProvider, firebaseReady } from "./firebase.js";
+import { applyVote, nextValue, VALUE } from "./voteOps.js";
+import { doc, onSnapshot, collection, query, where, getDocs, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 
-const SEED = [
-  { id:"p0",  name:"Lionel Messi",          category:"Sports",     country:"Argentina",    votes:45231 },
-  { id:"p1",  name:"Cristiano Ronaldo",      category:"Sports",     country:"Portugal",     votes:44892 },
-  { id:"p2",  name:"Michael Jackson",        category:"Music",      country:"USA",          votes:42105 },
-  { id:"p3",  name:"Albert Einstein",        category:"Science",    country:"Germany",      votes:40567 },
-  { id:"p4",  name:"Nelson Mandela",         category:"Politics",   country:"South Africa", votes:39812 },
-  { id:"p5",  name:"Taylor Swift",           category:"Music",      country:"USA",          votes:38921 },
-  { id:"p6",  name:"Elon Musk",              category:"Technology", country:"USA",          votes:37456 },
-  { id:"p7",  name:"Barack Obama",           category:"Politics",   country:"USA",          votes:33245 },
-  { id:"p8",  name:"Michael Jordan",         category:"Sports",     country:"USA",          votes:32678 },
-  { id:"p9",  name:"Muhammad Ali",           category:"Sports",     country:"USA",          votes:31554 },
-  { id:"p10", name:"Martin Luther King Jr.", category:"Activism",   country:"USA",          votes:27800 },
-  { id:"p11", name:"Mahatma Gandhi",         category:"Activism",   country:"India",        votes:27200 },
-  { id:"p12", name:"Marie Curie",            category:"Science",    country:"Poland",       votes:26500 },
-  { id:"p13", name:"Isaac Newton",           category:"Science",    country:"UK",           votes:25900 },
-  { id:"p14", name:"Nikola Tesla",           category:"Science",    country:"Serbia",       votes:25100 },
-  { id:"p15", name:"Leonardo da Vinci",      category:"Art",        country:"Italy",        votes:24400 },
-  { id:"p16", name:"Steve Jobs",             category:"Technology", country:"USA",          votes:23800 },
-  { id:"p17", name:"Bill Gates",             category:"Technology", country:"USA",          votes:22600 },
-  { id:"p18", name:"Beyoncé",                category:"Music",      country:"USA",          votes:21200 },
-  { id:"p19", name:"William Shakespeare",    category:"Literature", country:"UK",           votes:20500 },
-  { id:"p20", name:"Pablo Picasso",          category:"Art",        country:"Spain",        votes:19100 },
-  { id:"p21", name:"Marilyn Monroe",         category:"Cinema",     country:"USA",          votes:18400 },
-  { id:"p22", name:"Charlie Chaplin",        category:"Cinema",     country:"UK",           votes:17700 },
-  { id:"p23", name:"Winston Churchill",      category:"Politics",   country:"UK",           votes:17000 },
-  { id:"p24", name:"Napoleon Bonaparte",     category:"Politics",   country:"France",       votes:15700 },
-  { id:"p25", name:"Abraham Lincoln",        category:"Politics",   country:"USA",          votes:13900 },
-  { id:"p26", name:"Karl Marx",              category:"Philosophy", country:"Germany",      votes:12700 },
-  { id:"p27", name:"Socrates",               category:"Philosophy", country:"Greece",       votes:10900 },
-  { id:"p28", name:"Charles Darwin",         category:"Science",    country:"UK",           votes:9200  },
-  { id:"p29", name:"Stephen Hawking",        category:"Science",    country:"UK",           votes:8700  },
-  { id:"p30", name:"Rosa Parks",             category:"Activism",   country:"USA",          votes:7800  },
-  { id:"p31", name:"Frida Kahlo",            category:"Art",        country:"Mexico",       votes:7000  },
-  { id:"p32", name:"Oscar Wilde",            category:"Literature", country:"Ireland",      votes:6600  },
-  { id:"p33", name:"George Orwell",          category:"Literature", country:"UK",           votes:6200  },
-  { id:"p34", name:"Leo Tolstoy",            category:"Literature", country:"Russia",       votes:5800  },
-  { id:"p35", name:"Mark Twain",             category:"Literature", country:"USA",          votes:5000  },
-  { id:"p36", name:"Bruce Lee",              category:"Sports",     country:"USA",          votes:2300  },
-  { id:"p37", name:"Serena Williams",        category:"Sports",     country:"USA",          votes:2100  },
-  { id:"p38", name:"Alan Turing",            category:"Technology", country:"UK",           votes:800   },
-  { id:"p39", name:"Ada Lovelace",           category:"Technology", country:"UK",           votes:700   },
-  { id:"p40", name:"Voltaire",               category:"Philosophy", country:"France",       votes:310   },
-  { id:"p41", name:"Dante Alighieri",        category:"Literature", country:"Italy",        votes:260   },
-];
+// Los votos ya no son de ejemplo: vienen de Firestore (stats/votes).
 
 // ── Base de datos v2: lista general + máximo 3 eventos en la portada ──────────
-// Los votos de ejemplo del SEED se conservan; el resto empieza en 0.
-const SEED_VOTES = Object.fromEntries(SEED.map(p => [p.name, p.votes]));
-const INITIAL_PEOPLE = PEOPLE_DATA.map(p => ({ ...p, votes: SEED_VOTES[p.name] ?? 0, noWiki: !p.wiki }));
+const BASE_PEOPLE = PEOPLE_DATA.map(p => ({ ...p, noWiki: !p.wiki }));
+const slugify = s => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
+const PERSON_PATH = /^\/p\/([a-z0-9-]{1,80})\/?$/;
 
 // Cambia aquí los eventos de la portada (máximo 3). Los ids están en data/events.json
 const HOME_EVENTS = [
@@ -220,8 +181,8 @@ function FilterPicker({ label, icon, value, options, getLabel, onSelect, onClear
 }
 
 // ── Person Detail Panel ───────────────────────────────────────────────────────
-function DetailPanel({ person, rank, voteState, onVote, onClose }) {
-  const rs = RANK_STYLE[rank];
+function DetailPanel({ person, rank, voteState, onVote, onClose, onShare }) {
+  const rs = rank ? RANK_STYLE[rank] : undefined;
   return (
     <div style={{position:"fixed",inset:0,zIndex:150,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)",backdropFilter:"blur(6px)",padding:"0 16px"}}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
@@ -241,7 +202,7 @@ function DetailPanel({ person, rank, voteState, onVote, onClose }) {
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
               {rs
                 ? <span style={{fontSize:13,fontWeight:800,color:rs.color,background:rs.bg,border:`1px solid ${rs.border}`,borderRadius:6,padding:"2px 8px"}}>#{rank}</span>
-                : <span style={{fontSize:13,fontWeight:700,color:"#94a3b8"}}>#{rank}</span>
+                : rank ? <span style={{fontSize:13,fontWeight:700,color:"#94a3b8"}}>#{rank}</span> : null
               }
               <span style={{fontSize:11,color:"#94a3b8"}}>{catIcon(person.category)} {person.category}</span>
             </div>
@@ -269,6 +230,9 @@ function DetailPanel({ person, rank, voteState, onVote, onClose }) {
             <ChevronDown size={20}/> Bajar
           </button>
         </div>
+        <p style={{textAlign:"center",fontSize:12,color:"#94a3b8",margin:"14px 0 0"}}>Un voto por cuenta.{" "}
+          <button onClick={onShare} style={{border:"none",background:"none",color:"#2563eb",fontWeight:600,fontSize:12,cursor:"pointer",padding:0}}>Copiar enlace</button>
+        </p>
       </div>
     </div>
   );
@@ -336,20 +300,16 @@ function Row({ person, rank, voteState, pulse, onVote, highlighted, onTap }) {
 
 
 
-const CATS = ["Sports","Music","Science","Technology","Art","Cinema","Literature","Politics","Philosophy","Activism"];
+const CATS = ["Sports","Music","Cinema","TV","Politics","Business","Technology","Science","Internet","Art","Fashion","Literature","Philosophy","History","Religion","Activism","Gastronomy","Royalty"];
 const COUNTRIES = ["Argentina","Australia","Austria","Belgium","Brazil","Canada","Chile","China","Colombia","Cuba","Czech Republic","Denmark","Egypt","Finland","France","Germany","Greece","Hungary","India","Ireland","Israel","Italy","Japan","Mexico","Netherlands","Norway","Pakistan","Peru","Poland","Portugal","Russia","Serbia","South Africa","Spain","Sweden","Switzerland","Turkey","UK","Ukraine","USA","Venezuela"];
 
-function AdminPanel({ people, onClose, onAdd, onDelete }) {
+function AdminPanel({ people, pending, onClose, onAdd, onDelete, onReject }) {
   const [tab, setTab]       = useState("people"); // "people" | "add" | "pending"
   const [name, setName]     = useState("");
   const [cat, setCat]       = useState("Sports");
   const [country, setCountry] = useState("USA");
   const [msg, setMsg]       = useState("");
   const [search, setSearch] = useState("");
-  const [pending, setPending] = useState([
-    {id:"q1",name:"Shakira",category:"Music",country:"Colombia"},
-    {id:"q2",name:"Ronaldinho",category:"Sports",country:"Brazil"},
-  ]);
 
   const add = () => {
     if (!name.trim()) return;
@@ -359,7 +319,7 @@ function AdminPanel({ people, onClose, onAdd, onDelete }) {
     setTimeout(()=>setMsg(""), 2500);
   };
 
-  const approve = p => { onAdd(p.name, p.category, p.country||"—"); setPending(prev=>prev.filter(x=>x.id!==p.id)); };
+  const approve = p => { onAdd(p.name, CATS.includes(p.category)?p.category:"Sports", p.country||"Spain"); onReject(p.id); };
 
   const filteredPeople = people
     .filter(p => !search.trim() || p.name.toLowerCase().includes(search.toLowerCase()))
@@ -483,7 +443,7 @@ function AdminPanel({ people, onClose, onAdd, onDelete }) {
                       <button onClick={()=>approve(p)} style={{display:"flex",alignItems:"center",gap:4,background:"#f0fdf4",color:"#15803d",border:"1px solid #bbf7d0",borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                         <Check size={12}/>Aprobar
                       </button>
-                      <button onClick={()=>setPending(prev=>prev.filter(x=>x.id!==p.id))} style={{display:"flex",alignItems:"center",gap:4,background:"#fef2f2",color:"#dc2626",border:"1px solid #fecaca",borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      <button onClick={()=>onReject(p.id)} style={{display:"flex",alignItems:"center",gap:4,background:"#fef2f2",color:"#dc2626",border:"1px solid #fecaca",borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                         <Trash2 size={12}/>Rechazar
                       </button>
                     </div>
@@ -498,7 +458,17 @@ function AdminPanel({ people, onClose, onAdd, onDelete }) {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [people,        setPeople]        = useState(INITIAL_PEOPLE);
+  const [counts,        setCounts]        = useState({});   // marcador público: stats/votes
+  const [extra,         setExtra]         = useState([]);   // personas añadidas desde el panel
+  const [hidden,        setHidden]        = useState({});   // personas ocultadas desde el panel
+  const [user,          setUser]          = useState(null);
+  const [isAdmin,       setIsAdmin]       = useState(false);
+  const [pending,       setPending]       = useState([]);
+  const [loginOpen,     setLoginOpen]     = useState(false);
+  const [toast,         setToast]         = useState("");
+  const people = useMemo(()=>[...BASE_PEOPLE, ...extra]
+    .filter(p=>!hidden[p.id])
+    .map(p=>({...p, votes: counts[p.id] || 0})), [extra, hidden, counts]);
   const [scope,         setScope]         = useState("general"); // "general" o id de evento
   const vkey = id => id; // los eventos usan los mismos votos que la lista general
   const [votes,         setVotes]         = useState({});
@@ -516,9 +486,6 @@ export default function App() {
   const [sugDone,       setSugDone]       = useState(false);
   const [detailPerson,  setDetailPerson]  = useState(null);
   const [adminOpen,     setAdminOpen]     = useState(false);
-  const [adminLogin,    setAdminLogin]    = useState(false);
-  const [adminPw,       setAdminPw]       = useState("");
-  const [adminOk,       setAdminOk]       = useState(false);
   const [scrollTop,     setScrollTop]     = useState(0);
   const [showUp,        setShowUp]        = useState(false);
   const [navHidden,     setNavHidden]     = useState(false);
@@ -568,50 +535,114 @@ export default function App() {
 
   const scrollRef = useRef(()=>{}); scrollRef.current = scrollToItem;
 
-  const handleVote = useCallback((id,dir)=>{
-    const key = id;
-    setVotes(prev=>{
-      const cur=prev[key];
-      let delta=0, next={...prev};
-      if(cur===dir){
-        // same direction → remove vote
-        delta = dir==="up" ? -1 : 1;
-        delete next[key];
-      } else if(cur){
-        // switch direction
-        delta = dir==="up" ? 2 : -2;
-        next[key]=dir;
-      } else {
-        // new vote
-        delta = dir==="up" ? 1 : -1;
-        next[key]=dir;
-      }
-      setPeople(ps=>ps.map(p=>p.id===id?{...p,votes:p.votes+delta}:p));
-      return next;
-    });
+  // ── Firebase: marcador, personas extra, ocultas, sesión ─────────────────
+  const votesRef = useRef({}); votesRef.current = votes;
+  const userRef  = useRef(null); userRef.current = user;
+  const inFlight = useRef({});
+  const pendingVote = useRef(null);
+  const toastTimer = useRef(null);
+  const showToast = useCallback(msg=>{ setToast(msg); clearTimeout(toastTimer.current); toastTimer.current=setTimeout(()=>setToast(""),3200); },[]);
+
+  useEffect(()=>{
+    if(!firebaseReady) return;
+    const offs = [
+      onSnapshot(doc(db,"stats","votes"), d=>setCounts(d.data()?.counts||{}), ()=>{}),
+      onSnapshot(collection(db,"extraPeople"), q=>setExtra(q.docs.map(d=>({id:d.id, votes:0, noWiki:false, ...d.data()}))), ()=>{}),
+      onSnapshot(doc(db,"config","people"), d=>setHidden(d.data()?.hidden||{}), ()=>{}),
+      onAuthStateChanged(auth, u=>setUser(u)),
+    ];
+    return ()=>offs.forEach(f=>f());
+  },[]);
+
+  // Al entrar: cargar mis votos y si soy admin
+  useEffect(()=>{
+    if(!firebaseReady) return;
+    if(!user){ setVotes({}); setIsAdmin(false); return; }
+    let dead=false;
+    getDocs(query(collection(db,"votes"), where("uid","==",user.uid))).then(q=>{
+      if(dead) return;
+      const mine={}; q.docs.forEach(d=>{ const v=d.data(); mine[v.personId]= v.value===1?"up":"down"; });
+      setVotes(mine); votesRef.current=mine;
+      if(pendingVote.current){ const {id,dir}=pendingVote.current; pendingVote.current=null; voteRef.current(id,dir); }
+    }).catch(()=>{});
+    getDoc(doc(db,"admins",user.uid)).then(d=>!dead&&setIsAdmin(d.exists())).catch(()=>{});
+    return ()=>{dead=true;};
+  },[user]);
+
+  useEffect(()=>{
+    if(!isAdmin) { setPending([]); return; }
+    return onSnapshot(collection(db,"pending"), q=>setPending(q.docs.map(d=>({id:d.id,...d.data()}))), ()=>{});
+  },[isAdmin]);
+
+  const login = useCallback(async()=>{
+    try { await signInWithPopup(auth, googleProvider); setLoginOpen(false); }
+    catch(e){ if(e?.code!=="auth/popup-closed-by-user" && e?.code!=="auth/cancelled-popup-request") showToast("No se pudo iniciar sesión. Inténtalo de nuevo."); }
+  },[showToast]);
+
+  // Un voto por cuenta y persona. La misma flecha quita el voto; la otra lo cambia.
+  const handleVote = useCallback(async (id,dir)=>{
+    if(!firebaseReady){ showToast("La votación todavía no está conectada."); return; }
+    if(!userRef.current){ pendingVote.current={id,dir}; setLoginOpen(true); return; }
+    if(inFlight.current[id]) return;
+    const uid=userRef.current.uid;
+    const curDir=votesRef.current[id]||null;
+    const cur=curDir?VALUE[curDir]:0;
+    const nxt=nextValue(cur,dir);
+    const nxtDir= nxt===1?"up":nxt===-1?"down":null;
+    inFlight.current[id]=true;
+    setVotes(v=>{ const n={...v}; if(nxtDir) n[id]=nxtDir; else delete n[id]; votesRef.current=n; return n; });
     setPulse(prev=>({...prev,[id]:true}));
     setTimeout(()=>setPulse(prev=>({...prev,[id]:false})),350);
-  },[]);
+    try { await applyVote(db,uid,id,cur,nxt); }
+    catch(e){
+      setVotes(v=>{ const n={...v}; if(curDir) n[id]=curDir; else delete n[id]; votesRef.current=n; return n; });
+      showToast("No se pudo guardar el voto. Inténtalo de nuevo.");
+    }
+    finally { inFlight.current[id]=false; }
+  },[showToast]);
+  const voteRef = useRef(handleVote); voteRef.current = handleVote;
 
   const handleSuggest = useCallback(()=>{
     if(!sugName.trim()) return;
     const clean=titleCase(sugName);
     const dupe=people.find(p=>sim(p.name,clean)>0.75);
     if(dupe){setDupWarn(dupe.name);return;}
+    if(!firebaseReady){ showToast("Las sugerencias todavía no están conectadas."); return; }
+    if(!userRef.current){ setLoginOpen(true); return; }
+    addDoc(collection(db,"pending"),{name:clean,category:sugCat,uid:userRef.current.uid,at:serverTimestamp()})
+      .catch(()=>showToast("No se pudo enviar la sugerencia."));
     setSugDone(true);
     setTimeout(()=>{setSuggest(false);setSugDone(false);setSugName("");setDupWarn(null);},2000);
-  },[sugName,people]);
+  },[sugName,sugCat,people,showToast]);
 
+  // Panel admin: escribe en Firestore (las reglas solo lo permiten a cuentas en /admins)
   const handleAdd = useCallback((name,cat,country)=>{
-    setPeople(prev=>[...prev,{id:`pn${Date.now()}`,name,category:cat,country:country||"—",votes:0}]);
-  },[]);
+    const id=slugify(name); if(!id) return;
+    if(hidden[id]) setDoc(doc(db,"config","people"),{hidden:{[id]:false}},{merge:true}).catch(()=>{});
+    if(BASE_PEOPLE.some(p=>p.id===id)) return;
+    setDoc(doc(db,"extraPeople",id),{name,category:cat,country:country||"—",sub:"",tags:[],at:serverTimestamp()})
+      .catch(()=>showToast("No se pudo añadir."));
+  },[hidden,showToast]);
 
   const handleDelete = useCallback((id)=>{
-    setPeople(prev=>prev.filter(p=>p.id!==id));
-    setVotes(prev=>{ const n={...prev}; delete n[id]; return n; });
-  },[]);
+    setDoc(doc(db,"config","people"),{hidden:{[id]:true}},{merge:true}).catch(()=>showToast("No se pudo ocultar."));
+  },[showToast]);
 
-  const tryAdmin = ()=>{ if(adminPw==="peoplepick2025"){setAdminOk(true);setAdminOpen(true);setAdminLogin(false);setAdminPw("");}else setAdminPw(""); };
+  const handleReject = useCallback((id)=>{ deleteDoc(doc(db,"pending",id)).catch(()=>{}); },[]);
+
+  // ── Ficha enlazable: /p/{id} abre la persona destacada con su voto a mano ──
+  const openedFromUrl = useRef(false);
+  useEffect(()=>{
+    if(openedFromUrl.current) return;
+    const m = window.location.pathname.match(PERSON_PATH);
+    if(!m){ openedFromUrl.current=true; return; }
+    const p = ranked.find(x=>x.id===m[1]);
+    if(!p){ if(!firebaseReady || Object.keys(counts).length) { openedFromUrl.current=true; window.history.replaceState(null,"","/"); } return; }
+    openedFromUrl.current=true;
+    setTimeout(()=>{ scrollToItem(p.id); setDetailPerson({...p}); },300);
+  },[ranked,counts,scrollToItem]);
+  const openPerson = useCallback(p=>{ setDetailPerson(p); window.history.replaceState(null,"",`/p/${p.id}`); },[]);
+  const closePerson = useCallback(()=>{ setDetailPerson(null); window.history.replaceState(null,"","/"); },[]);
 
   const handleScroll = useCallback(e=>{
     const y=e.currentTarget.scrollTop;
@@ -770,7 +801,7 @@ export default function App() {
                     pulse={!!pulse[p.id]}
                     onVote={handleVote}
                     highlighted={hlId===p.id}
-                    onTap={()=>setDetailPerson({...p,rank:p.rank})}
+                    onTap={()=>openPerson({...p,rank:p.rank})}
                   />
                 </div>
               ))}
@@ -790,27 +821,39 @@ export default function App() {
       {/* ── FOOTER ── */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:90,height:36,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px",borderTop:"1px solid #f1f5f9",background:"rgba(255,255,255,0.9)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
         <span style={{fontSize:11,color:"#c4c9d4",fontWeight:400}}>© 2025 Andrés Mateos</span>
-        <button
-          onClick={()=>adminOk?setAdminOpen(true):setAdminLogin(true)}
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+        {user && (
+          <button onClick={()=>signOut(auth)} style={{fontSize:11,color:"#c4c9d4",fontWeight:500,border:"none",background:"transparent",cursor:"pointer",padding:"4px 0"}}>
+            Salir ({user.displayName?.split(" ")[0] || "cuenta"})
+          </button>
+        )}
+        {isAdmin && <button
+          onClick={()=>setAdminOpen(true)}
           style={{fontSize:11,color:"#c4c9d4",fontWeight:500,border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",gap:4,padding:"4px 0",transition:"color .15s"}}
           onMouseEnter={e=>e.currentTarget.style.color="#94a3b8"}
           onMouseLeave={e=>e.currentTarget.style.color="#c4c9d4"}
         >
           <Shield size={11}/> Admin
-        </button>
+        </button>}
+        </div>
       </div>
 
       {/* ── DETAIL PANEL ── */}
       {detailPerson && (()=>{
         // always read live data from people array
         const live = people.find(p=>p.id===detailPerson.id) || detailPerson;
+        const generalRank = (()=>{ const sorted=[...people].sort((a,b)=>b.votes-a.votes); const i=sorted.findIndex(p=>p.id===live.id); return i<0?detailPerson.rank:sorted.findIndex(p=>p.votes===live.votes)+1; })();
         return (
           <DetailPanel
             person={live}
-            rank={detailPerson.rank}
+            rank={live.votes===0?null:generalRank}
             voteState={votes[vkey(detailPerson.id)]||null}
             onVote={handleVote}
-            onClose={()=>setDetailPerson(null)}
+            onClose={closePerson}
+            onShare={()=>{
+              const url=`${window.location.origin}/p/${live.id}`;
+              (navigator.clipboard?.writeText(url)||Promise.reject()).then(()=>showToast("Enlace copiado")).catch(()=>showToast(url));
+            }}
           />
         );
       })()}
@@ -850,23 +893,27 @@ export default function App() {
         </div>
       )}
 
-      {/* ── ADMIN LOGIN ── */}
-      {adminLogin && (
-        <div style={{position:"fixed",inset:0,zIndex:150,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.3)",backdropFilter:"blur(4px)"}} onClick={e=>e.target===e.currentTarget&&setAdminLogin(false)}>
-          <div className="fu" style={{background:"#fff",borderRadius:24,padding:28,width:"100%",maxWidth:340,margin:"0 16px",boxShadow:"0 8px 40px rgba(0,0,0,0.1)"}}>
-            <h2 style={{fontSize:17,fontWeight:700,margin:"0 0 4px"}}>Acceso admin</h2>
-            <p style={{color:"#94a3b8",fontSize:12,marginBottom:14}}>Demo: <code style={{background:"#f1f5f9",padding:"2px 6px",borderRadius:6}}>peoplepick2025</code></p>
-            <input type="password" autoFocus value={adminPw} onChange={e=>setAdminPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryAdmin()} placeholder="Contraseña"
-              style={{width:"100%",border:"1px solid #e2e8f0",borderRadius:12,padding:"9px 12px",fontSize:14,outline:"none",marginBottom:14,boxSizing:"border-box"}}/>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setAdminLogin(false)} style={{flex:1,padding:"10px 0",borderRadius:12,border:"1px solid #e2e8f0",background:"transparent",fontSize:13,fontWeight:600,color:"#64748b",cursor:"pointer"}}>Cancelar</button>
-              <button onClick={tryAdmin} style={{flex:1,padding:"10px 0",borderRadius:12,border:"none",background:"#2563eb",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Entrar</button>
-            </div>
+      {/* ── LOGIN PARA VOTAR ── */}
+      {loginOpen && (
+        <div style={{position:"fixed",inset:0,zIndex:160,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.3)",backdropFilter:"blur(4px)",padding:"0 16px"}} onClick={e=>{if(e.target===e.currentTarget){setLoginOpen(false);pendingVote.current=null;}}}>
+          <div className="fu" style={{background:"#fff",borderRadius:24,padding:28,width:"100%",maxWidth:360,boxShadow:"0 8px 40px rgba(0,0,0,0.12)"}}>
+            <div style={{width:10,height:10,borderRadius:"50%",background:"#2563eb",marginBottom:14}}/>
+            <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 6px",letterSpacing:-.4}}>Entra para votar</h2>
+            <p style={{color:"#64748b",fontSize:14,lineHeight:1.5,margin:"0 0 20px"}}>Cada cuenta tiene un solo voto por persona. Así el ranking es de verdad. Tus votos no son públicos.</p>
+            <button onClick={login} style={{width:"100%",padding:"13px 0",borderRadius:999,border:"1px solid #e2e8f0",background:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,color:"#09090b"}}>
+              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+              Continuar con Google
+            </button>
+            <button onClick={()=>{setLoginOpen(false);pendingVote.current=null;}} style={{width:"100%",marginTop:10,padding:"10px 0",border:"none",background:"transparent",color:"#94a3b8",fontSize:13,fontWeight:600,cursor:"pointer"}}>Ahora no</button>
           </div>
         </div>
       )}
 
-      {adminOpen && <AdminPanel people={people} onClose={()=>setAdminOpen(false)} onAdd={handleAdd} onDelete={handleDelete}/>}
+      {toast && (
+        <div role="status" style={{position:"fixed",left:"50%",bottom:52,transform:"translateX(-50%)",zIndex:600,background:"#09090b",color:"#fff",fontSize:13,fontWeight:600,padding:"10px 16px",borderRadius:999,boxShadow:"0 6px 24px rgba(0,0,0,.2)",maxWidth:"calc(100vw - 32px)",textAlign:"center"}}>{toast}</div>
+      )}
+
+      {adminOpen && isAdmin && <AdminPanel people={people} pending={pending} onClose={()=>setAdminOpen(false)} onAdd={handleAdd} onDelete={handleDelete} onReject={handleReject}/>}
     </div>
   );
 }
