@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { ChevronUp, ChevronDown, Search, Plus, X, ArrowUpDown, ArrowUp, CheckCircle2, AlertCircle, Shield, Check, Trash2 } from "lucide-react";
+import PEOPLE_DATA from "../data/people.json";
+import EVENTS_DATA from "../data/events.json";
 
 const SEED = [
   { id:"p0",  name:"Lionel Messi",          category:"Sports",     country:"Argentina",    votes:45231 },
@@ -46,10 +48,24 @@ const SEED = [
   { id:"p41", name:"Dante Alighieri",        category:"Literature", country:"Italy",        votes:260   },
 ];
 
+// ── Base de datos v2: lista general + máximo 3 eventos en la portada ──────────
+// Los votos de ejemplo del SEED se conservan; el resto empieza en 0.
+const SEED_VOTES = Object.fromEntries(SEED.map(p => [p.name, p.votes]));
+const INITIAL_PEOPLE = PEOPLE_DATA.map(p => ({ ...p, votes: SEED_VOTES[p.name] ?? 0, noWiki: !p.wiki }));
+
+// Cambia aquí los eventos de la portada (máximo 3). Los ids están en data/events.json
+const HOME_EVENTS = [
+  { id: "spain-election-29n",      label: "Elecciones 29N" },
+  { id: "laliga-mvp-2026-27",      label: "LaLiga" },
+  { id: "person-of-the-year-2026", label: "Persona del año" },
+].map(h => ({ ...h, event: EVENTS_DATA.find(e => e.id === h.id) })).filter(h => h.event).slice(0, 3);
+
 const CAT_ICON = {
   Sports:"⚽", Music:"🎵", Science:"🔬", Technology:"💻",
   Art:"🎨", Cinema:"🎬", Literature:"📚", Politics:"🏛️",
   Philosophy:"🧠", Activism:"✊", Community:"🌐",
+  TV:"📺", Business:"💼", Internet:"📱", Fashion:"👗", History:"🏛", Religion:"🕊️",
+  Gastronomy:"🍳", Royalty:"👑",
 };
 // Flag usando React directamente con SVG inline via country codes
 // Funciona en todos los sistemas incluyendo Windows
@@ -78,6 +94,9 @@ const COUNTRY_ISO = {
   "Nepal":"NP","Tibet":"CN","Mongolia":"MN","Kazakhstan":"KZ",
   "Slovenia":"SI","Croatia":"HR","Slovakia":"SK","Bolivia":"BO",
   "Guatemala":"GT","Albania":"AL","Finland":"FI",
+  "Belarus":"BY","Bulgaria":"BG","Dominican Republic":"DO","El Salvador":"SV","Gabon":"GA",
+  "Georgia":"GE","Iceland":"IS","Ivory Coast":"CI","Monaco":"MC","Panama":"PA","Qatar":"QA",
+  "Romania":"RO","Thailand":"TH","Uruguay":"UY",
 };
 
 function Flag({ country, size=15 }) {
@@ -112,12 +131,16 @@ const RANK_STYLE = {
 
 // ── Wikipedia photo ───────────────────────────────────────────────────────────
 const photoCache = {};
-function usePhoto(name) {
+function usePhoto(name, wiki, lang="en", noWiki=false) {
   const [url, setUrl] = useState(()=> photoCache[name] !== undefined ? photoCache[name] : undefined);
   useEffect(()=>{
     if (!name || photoCache[name] !== undefined) { if (photoCache[name]!==undefined) setUrl(photoCache[name]); return; }
+    if (noWiki) { photoCache[name]=null; setUrl(null); return; }
     let dead = false;
-    fetch(`https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(name.split(" (")[0])}&gsrlimit=1&prop=pageimages&pithumbsize=300&format=json&origin=*`)
+    const api = wiki
+      ? `https://${lang}.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(wiki)}&redirects=1&prop=pageimages&pithumbsize=300&format=json&origin=*`
+      : `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(name.split(" (")[0])}&gsrlimit=1&prop=pageimages&pithumbsize=300&format=json&origin=*`;
+    fetch(api)
       .then(r=>r.json()).then(data=>{
         if (dead) return;
         const page = data.query && Object.values(data.query.pages||{})[0];
@@ -131,8 +154,8 @@ function usePhoto(name) {
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
 const AV_COLORS = ["#dbeafe|#1d4ed8","#f3e8ff|#7c3aed","#dcfce7|#15803d","#fef9c3|#a16207","#fee2e2|#b91c1c","#e0f2fe|#0369a1","#fce7f3|#be185d","#f1f5f9|#475569"];
-function Avatar({ name, size=52 }) {
-  const url = usePhoto(name);
+function Avatar({ name, wiki, lang, noWiki, size=52 }) {
+  const url = usePhoto(name, wiki, lang, noWiki);
   const [err, setErr] = useState(false);
   const initials = name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
   let hash=0; for(let i=0;i<name.length;i++) hash=name.charCodeAt(i)+((hash<<5)-hash);
@@ -211,7 +234,7 @@ function DetailPanel({ person, rank, voteState, onVote, onClose }) {
         {/* rank badge + avatar */}
         <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
           <div style={{position:"relative",flexShrink:0}}>
-            <Avatar name={person.name} size={72}/>
+            <Avatar name={person.name} wiki={person.wiki} lang={person.wikiLang} noWiki={person.noWiki} size={72}/>
             {rs && <div style={{position:"absolute",bottom:-4,right:-4,fontSize:20,lineHeight:1}}>{rs.medal}</div>}
           </div>
           <div style={{flex:1,minWidth:0}}>
@@ -256,7 +279,7 @@ const ROW_H   = 116;
 const OVERSCAN = 8;
 
 function Row({ person, rank, voteState, pulse, onVote, highlighted, onTap }) {
-  const rs = RANK_STYLE[rank];
+  const rs = person.votes>0 ? RANK_STYLE[rank] : undefined; // sin votos no hay medalla
 
   return (
     <li
@@ -278,7 +301,7 @@ function Row({ person, rank, voteState, pulse, onVote, highlighted, onTap }) {
 
       {/* avatar */}
       <div style={{marginRight:14,flexShrink:0}}>
-        <Avatar name={person.name} size={56}/>
+        <Avatar name={person.name} wiki={person.wiki} lang={person.wikiLang} noWiki={person.noWiki} size={56}/>
       </div>
 
       {/* info */}
@@ -475,7 +498,11 @@ function AdminPanel({ people, onClose, onAdd, onDelete }) {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [people,        setPeople]        = useState(SEED);
+  const [people,        setPeople]        = useState(INITIAL_PEOPLE);
+  const [scope,         setScope]         = useState("general"); // "general" o id de evento
+  const [evCounts,      setEvCounts]      = useState({});        // votos por evento: {eventId:{personId:n}}
+  const scopeRef = useRef("general"); scopeRef.current = scope;
+  const vkey = id => scope==="general" ? id : `${scope}:${id}`;
   const [votes,         setVotes]         = useState({});
   const [pulse,         setPulse]         = useState({});
   const [filterCat,     setFilterCat]     = useState("All");
@@ -503,20 +530,26 @@ export default function App() {
   const lastScrollY   = useRef(0);
   const hideTimer     = useRef(null);
 
-  const HEADER_H   = 124;
+  const HEADER_H   = 166;
   const containerH = typeof window !== "undefined" ? window.innerHeight - HEADER_H : 500;
 
   const allCats      = useMemo(()=>["All",...[...new Set(people.map(p=>p.category))].sort()],[people]);
   const allCountries = useMemo(()=>["All",...[...new Set(people.map(p=>p.country).filter(Boolean))].sort()],[people]);
 
+  const activeEvent = HOME_EVENTS.find(h=>h.id===scope)?.event || null;
   const ranked = useMemo(()=>{
     let list = people;
-    if (filterCat     !== "All") list = list.filter(p=>p.category===filterCat);
-    if (filterCountry !== "All") list = list.filter(p=>p.country===filterCountry);
+    if (activeEvent) {
+      const byId = Object.fromEntries(people.map(p=>[p.id,p]));
+      list = activeEvent.people.map(id=>byId[id]).filter(Boolean).map(p=>({...p,votes:evCounts[scope]?.[p.id]||0}));
+    } else {
+      if (filterCat     !== "All") list = list.filter(p=>p.category===filterCat);
+      if (filterCountry !== "All") list = list.filter(p=>p.country===filterCountry);
+    }
     list = [...list].sort((a,b)=>sortOrder==="most_voted"?b.votes-a.votes:a.votes-b.votes);
     let rank=1;
-    return list.map((p,i)=>{ if(i>0&&p.votes!==list[i-1].votes) rank=i+1; return{...p,rank}; });
-  },[people,filterCat,filterCountry,sortOrder]);
+    return list.map((p,i)=>{ if(i>0&&p.votes!==list[i-1].votes) rank=i+1; return{...p,rank:p.votes===0?i+1:rank}; });
+  },[people,filterCat,filterCountry,sortOrder,scope,evCounts,activeEvent]);
 
   const searchRes = useMemo(()=>{
     if(!searchQ.trim()) return [];
@@ -535,24 +568,29 @@ export default function App() {
     setHlId(id); setTimeout(()=>setHlId(null),2000);
   },[ranked,containerH]);
 
+  const scrollRef = useRef(()=>{}); scrollRef.current = scrollToItem;
+
   const handleVote = useCallback((id,dir)=>{
+    const sc = scopeRef.current;
+    const key = sc==="general" ? id : `${sc}:${id}`;
     setVotes(prev=>{
-      const cur=prev[id];
+      const cur=prev[key];
       let delta=0, next={...prev};
       if(cur===dir){
         // same direction → remove vote
         delta = dir==="up" ? -1 : 1;
-        delete next[id];
+        delete next[key];
       } else if(cur){
         // switch direction
         delta = dir==="up" ? 2 : -2;
-        next[id]=dir;
+        next[key]=dir;
       } else {
         // new vote
         delta = dir==="up" ? 1 : -1;
-        next[id]=dir;
+        next[key]=dir;
       }
-      setPeople(ps=>ps.map(p=>p.id===id?{...p,votes:p.votes+delta}:p));
+      if (sc==="general") setPeople(ps=>ps.map(p=>p.id===id?{...p,votes:p.votes+delta}:p));
+      else setEvCounts(ec=>({...ec,[sc]:{...(ec[sc]||{}),[id]:((ec[sc]||{})[id]||0)+delta}}));
       return next;
     });
     setPulse(prev=>({...prev,[id]:true}));
@@ -643,7 +681,7 @@ export default function App() {
           {isSearch && searchQ.trim() && (
             <div className="fu" style={{marginTop:6,background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.1)"}}>
               {searchRes.length>0 ? searchRes.map(p=>(
-                <button key={p.id} onClick={()=>{setIsSearch(false);setSearchQ("");scrollToItem(p.id);}}
+                <button key={p.id} onClick={()=>{setIsSearch(false);setSearchQ("");if(scope!=="general"){setScope("general");setTimeout(()=>scrollRef.current(p.id),80);}else scrollToItem(p.id);}}
                   style={{width:"100%",textAlign:"left",padding:"12px 18px",border:"none",borderBottom:"1px solid #f8fafc",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                   <span style={{fontWeight:600,fontSize:14}}>{p.name}</span>
                   <span style={{fontSize:12,fontWeight:700,color:"#2563eb"}}>Go →</span>
@@ -658,8 +696,23 @@ export default function App() {
           )}
         </div>
 
-        {/* FILTERS */}
-        <div style={{maxWidth:672,margin:"0 auto",padding:"4px 16px 8px",display:"flex",alignItems:"center",gap:8}}>
+        {/* TABS: lista general + hasta 3 eventos */}
+        <div style={{maxWidth:672,margin:"0 auto",padding:"2px 16px 6px",display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
+          {[{id:"general",label:"General"},...HOME_EVENTS].map(t=>(
+            <button key={t.id} onClick={()=>{setScope(t.id);listRef.current?.scrollTo({top:0});}}
+              style={{flexShrink:0,padding:"7px 14px",borderRadius:999,border:`1px solid ${scope===t.id?"#09090b":"#e2e8f0"}`,background:scope===t.id?"#09090b":"transparent",color:scope===t.id?"#fff":"#64748b",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",transition:"all .15s"}}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* FILTERS (solo en la lista general) / pregunta del evento */}
+        <div style={{maxWidth:672,margin:"0 auto",padding:"4px 16px 8px",display:"flex",alignItems:"center",gap:8,minHeight:34}}>
+          {activeEvent ? (
+            <p style={{margin:0,fontSize:13,fontWeight:500,color:"#64748b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+              {activeEvent.questionEs}
+            </p>
+          ) : (<>
           <button onClick={()=>setSortOrder(o=>o==="most_voted"?"least_voted":"most_voted")}
             style={{padding:"4px 6px",borderRadius:"50%",border:"1px solid #e2e8f0",background:"transparent",cursor:"pointer",color:"#94a3b8",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
             <ArrowUpDown size={12}/>
@@ -684,6 +737,7 @@ export default function App() {
               Clear all
             </button>
           )}
+          </>)}
         </div>
       </div>
 
@@ -715,7 +769,7 @@ export default function App() {
                 <div key={p.id} style={{position:"absolute",top:HEADER_H+(startIdx+i)*ROW_H,left:0,right:0}}>
                   <Row
                     person={p} rank={p.rank}
-                    voteState={votes[p.id]||null}
+                    voteState={votes[vkey(p.id)]||null}
                     pulse={!!pulse[p.id]}
                     onVote={handleVote}
                     highlighted={hlId===p.id}
@@ -757,7 +811,7 @@ export default function App() {
           <DetailPanel
             person={live}
             rank={detailPerson.rank}
-            voteState={votes[detailPerson.id]||null}
+            voteState={votes[vkey(detailPerson.id)]||null}
             onVote={handleVote}
             onClose={()=>setDetailPerson(null)}
           />

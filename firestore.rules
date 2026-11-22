@@ -12,6 +12,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── Events (grupos de votación: elecciones, temporadas, debates eternos) ──
+    // Lectura pública; solo se crean/editan desde el backend (seed-v2.js o panel admin)
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ── Votes ─────────────────────────────────────────────────────────────
     // El ID del documento es siempre "{fp}_{personId}"
     // Un fingerprint solo puede leer/escribir sus propios votos
