@@ -54,6 +54,9 @@ export function buildIndex(people) {
   return { full, surname };
 }
 
+const RELATIVE = /\b(hij[oa]s?|madre|padre|herman[oa]s?|novi[oa]|pareja|mujer|marido|espos[oa]|ex|nietos?|nietas?|sobrin[oa]s?|prim[oa]|suegr[oa]|cunad[oa])\s+de\b/;
+export const aboutRelative = trend => RELATIVE.test(norm(trend.title));
+
 export function matchTrend(trend, index) {
   const t = norm(trend.title);
   const padded = ` ${t} `;

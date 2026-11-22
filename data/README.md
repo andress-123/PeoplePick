@@ -5,15 +5,9 @@ Todo es de personas. Dos archivos:
 - `people.json`: cada persona con `id` (fijo, sale del nombre), `name`, `category`, `country`, `sub` (una línea de contexto: club, cargo, obra), `tags`, `events` (en qué eventos aparece) y `wiki` (título exacto en Wikipedia, para que la foto sea siempre la correcta).
 - `events.json`: grupos de votación. Cada evento tiene `title` / `titleEs`, `question` / `questionEs`, `type` (election, season, award, versus, goat, poll), `status` (live, upcoming, evergreen), `mode` (ranking o versus), `heat` (1-3, cuánto empujarlo en portada), `featured`, fechas opcionales y la lista `people` (ids).
 
-## Cargarla en Firestore
+## Cómo la usa la app
 
-```bash
-node seed-v2.js                     # simulacro, no escribe nada
-node seed-v2.js --write             # crea/actualiza personas y eventos sin tocar votos existentes
-node seed-v2.js --write --replace   # además borra de /people lo que no esté en la base nueva (guarda copia antes)
-```
-
-Necesita `serviceAccountKey.json` en la raíz, igual que `seed.js`. Las reglas (`firestore.rules`) ya incluyen la colección `events` en solo lectura.
+La app lee las personas y los eventos directamente de estos archivos (no hace falta cargarlos en Firestore). En Firestore solo viven los votos (`votes`), el marcador (`stats/votes`), las personas añadidas desde el panel (`extraPeople`) y las ocultadas (`config/people`). Ver `ACTIVAR.md`.
 
 ## Criterio editorial
 

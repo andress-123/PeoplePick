@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { CONFIG } from "./config.js";
 import { fetchTrends, parseTrends, buildIndex, matchTrend, sensitiveHit, cooldownBlock, postsToday,
-  fetchCounts, rankingFor, composeTweet, composeReply, catEs } from "./lib.js";
+  fetchCounts, rankingFor, composeTweet, composeReply, catEs, aboutRelative } from "./lib.js";
 import { renderCard, fetchPhoto } from "./card.js";
 
 const arg = k => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : null; };
@@ -44,6 +44,7 @@ async function main() {
     const person = m.person;
     if (seen.has(person.id)) continue;
     seen.add(person.id);
+    if (aboutRelative(trend)) { discarded.push({ trend: trend.title, person: person.name, reason: "la tendencia habla de un familiar, no de la persona" }); continue; }
     const sens = sensitiveHit(trend);
     if (sens) { discarded.push({ trend: trend.title, person: person.name, reason: `tema sensible («${sens}»)`, news: trend.news.slice(0, 2) }); continue; }
     const cd = cooldownBlock(state, person.id);
