@@ -2,6 +2,8 @@ name: Bot de tendencias
 on:
   schedule:
     - cron: "17 7-22 * * *"   # cada hora de 8:17 a 23:17 (hora peninsular en invierno)
+  push:                         # al cambiar el bot: una pasada de prueba en simulación
+    paths: ["bot/**", "data/**", ".github/workflows/bot.yml"]
   workflow_dispatch:
     inputs:
       modo:
@@ -20,7 +22,7 @@ jobs:
       - run: npm ci
       - name: Ejecutar el bot
         env:
-          BOT_MODE: ${{ github.event.inputs.modo || vars.BOT_MODE || 'simulacion' }}
+          BOT_MODE: ${{ github.event_name == 'push' && 'simulacion' || github.event.inputs.modo || vars.BOT_MODE || 'simulacion' }}
           SITE_URL: ${{ vars.SITE_URL }}
           FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
