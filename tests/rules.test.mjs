@@ -129,3 +129,36 @@ test("solo un admin añade personas y lee sugerencias", async () => {
   await assertSucceeds(getDoc(doc(db("boss"), "pending/abc")));
   await assertFails(setDoc(doc(db("bob"), "admins/bob"), { email: "bob@example.com" }));
 });
+
+// ── Votos sin cuenta: límite de 3 ────────────────────────────────────────────
+const anon = uid => env.authenticatedContext(uid, { firebase: { sign_in_provider: "anonymous" } }).firestore();
+const google = uid => env.authenticatedContext(uid, { firebase: { sign_in_provider: "google.com" } }).firestore();
+
+test("sin cuenta se puede votar a 3 personas; la cuarta pide Google", async () => {
+  for (const p of ["rosalia", "quevedo", "aitana"]) await assertSucceeds(applyVote(anon("a1"), "a1", p, 0, 1));
+  await assertFails(applyVote(anon("a1"), "a1", "bad-bunny", 0, 1));
+  // cambiar o quitar un voto ya hecho sigue permitido
+  await assertSucceeds(applyVote(anon("a1"), "a1", "rosalia", 1, -1));
+  await assertSucceeds(applyVote(anon("a1"), "a1", "quevedo", 1, 0));
+  // al entrar con Google (misma sesión vinculada) ya no hay límite
+  await assertSucceeds(applyVote(google("a1"), "a1", "bad-bunny", 0, 1));
+  const c = await counts();
+  assert.equal(c["bad-bunny"], 1); assert.equal(c["rosalia"], -1); assert.equal(c["quevedo"], 0);
+});
+
+test("con Google no hay límite", async () => {
+  for (const p of ["a-uno", "a-dos", "a-tres", "a-cuatro", "a-cinco"]) await assertSucceeds(applyVote(google("g1"), "g1", p, 0, 1));
+});
+
+test("no se puede trucar el contador de votos de la sesión", async () => {
+  // bajar el contador para recuperar votos
+  for (const p of ["rosalia", "quevedo", "aitana"]) await assertSucceeds(applyVote(anon("a2"), "a2", p, 0, 1));
+  await assertFails(setDoc(doc(anon("a2"), "users/a2"), { n: 0, last: "rosalia" }));
+  // votar sin sumar al contador
+  const f = anon("a2"); const b = writeBatch(f);
+  b.set(doc(f, "votes/a2_bad-bunny"), { uid: "a2", personId: "bad-bunny", value: 1, at: serverTimestamp() });
+  b.update(doc(f, "stats/votes"), new FieldPath("counts", "bad-bunny"), increment(1), "last", { uid: "a2", pid: "bad-bunny" });
+  await assertFails(b.commit());
+  // tocar el contador de otra sesión
+  await assertFails(setDoc(doc(anon("a3"), "users/a2"), { n: 1, last: "rosalia" }));
+});

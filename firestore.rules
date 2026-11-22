@@ -4,7 +4,7 @@ rules_version = '2';
 // PeoplePick — reglas de Firestore
 //
 // Un voto por cuenta y persona, sin servidor:
-//   · Para votar hay que entrar con una cuenta (Google).
+//   · Los 3 primeros votos se pueden hacer sin cuenta (sesión anónima). Para más, Google.
 //   · Cada voto es un documento /votes/{uid}_{personId} con value = 1 (sube) o -1 (baja).
 //     Solo puede existir uno por cuenta y persona porque el id lo fija la propia cuenta.
 //   · El marcador público vive en /stats/votes (un mapa counts[personId]).
@@ -27,6 +27,14 @@ service cloud.firestore {
     function voteAfter(voteId)  { return existsAfter(votePath(voteId)) ? getAfter(votePath(voteId)).data.value : 0; }
     function validPersonId(pid) { return pid is string && pid.matches('^[a-z0-9-]{1,80}$'); }
 
+    // Votos sin cuenta: una sesión anónima puede crear como máximo ANON_LIMIT votos.
+    // Después hay que entrar con Google (la misma sesión se vincula y conserva sus votos).
+    function anonLimit()  { return 3; }
+    function isAnon()     { return request.auth.token.get('firebase', {}).get('sign_in_provider', '') == 'anonymous'; }
+    function userPath()   { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function nBefore()    { return exists(userPath()) ? get(userPath()).data.n : 0; }
+    function nAfter()     { return existsAfter(userPath()) ? getAfter(userPath()).data.n : 0; }
+
     // ── Votos ────────────────────────────────────────────────────────────────
     match /votes/{voteId} {
       // Cada cuenta solo ve sus propios votos (privacidad)
@@ -40,7 +48,9 @@ service cloud.firestore {
         && request.resource.data.value in [1, -1]
         && request.resource.data.at == request.time
         && countAfter(request.resource.data.personId)
-             == countBefore(request.resource.data.personId) + request.resource.data.value;
+             == countBefore(request.resource.data.personId) + request.resource.data.value
+        && nAfter() == nBefore() + 1
+        && (!isAnon() || nAfter() <= anonLimit());
 
       // Cambiar de "sube" a "baja" o al revés
       allow update: if signedIn()
@@ -77,6 +87,18 @@ service cloud.firestore {
              == resource.data.counts.get(request.resource.data.last.pid, 0)
                 + voteAfter(request.auth.uid + '_' + request.resource.data.last.pid)
                 - voteBefore(request.auth.uid + '_' + request.resource.data.last.pid);
+    }
+
+    // ── Contador de votos creados por cada sesión (para el límite sin cuenta) ──
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['n', 'last'])
+        && request.resource.data.n == (resource == null ? 0 : resource.data.n) + 1
+        && validPersonId(request.resource.data.last)
+        && !exists(votePath(uid + '_' + request.resource.data.last))
+        && existsAfter(votePath(uid + '_' + request.resource.data.last));
+      allow delete: if false;
     }
 
     // ── Admins ──────────────────────────────────────────────────────────────
