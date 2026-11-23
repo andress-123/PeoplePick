@@ -244,7 +244,7 @@ const ROW_H   = 116;
 const OVERSCAN = 8;
 
 function Row({ person, rank, voteState, pulse, onVote, highlighted, onTap }) {
-  const rs = person.votes>0 ? RANK_STYLE[rank] : undefined; // sin votos no hay medalla
+  const rs = person.votes>0 && !person.tied ? RANK_STYLE[rank] : undefined; // sin votos o empatado: sin medalla
 
   return (
     <li
@@ -514,8 +514,11 @@ export default function App() {
       if (filterCountry !== "All") list = list.filter(p=>p.country===filterCountry);
     }
     list = [...list].sort((a,b)=>sortOrder==="most_voted"?b.votes-a.votes:a.votes-b.votes);
-    let rank=1;
-    return list.map((p,i)=>{ if(i>0&&p.votes!==list[i-1].votes) rank=i+1; return{...p,rank:p.votes===0?i+1:rank}; });
+    // Empates: se numeran en orden (01, 02, 03…) y sin medalla, para no dar oros repetidos.
+    return list.map((p,i)=>{
+      const tied = (i>0 && p.votes===list[i-1].votes) || (i<list.length-1 && p.votes===list[i+1].votes);
+      return {...p, rank:i+1, tied};
+    });
   },[people,filterCat,filterCountry,sortOrder,activeEvent]);
 
   const searchRes = useMemo(()=>{
