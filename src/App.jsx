@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { ChevronUp, ChevronDown, Search, Plus, X, ArrowUpDown, ArrowUp, CheckCircle2, AlertCircle, Shield, Check, Trash2 } from "lucide-react";
 import PEOPLE_DATA from "../data/people.json";
 import EVENTS_DATA from "../data/events.json";
+import SEED_VOTES from "../data/seed.json"; // base de arranque simulada (scripts/seed-base.py); se suma a los votos reales
 import { db, auth, googleProvider, firebaseReady } from "./firebase.js";
 import { applyVote, nextValue, VALUE, ANON_LIMIT } from "./voteOps.js";
 import { doc, onSnapshot, collection, query, where, getDocs, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged, signInWithPopup, signInAnonymously, linkWithPopup, signInWithCredential, GoogleAuthProvider, signOut } from "firebase/auth";
 
-// Los votos ya no son de ejemplo: vienen de Firestore (stats/votes).
+// Votos mostrados = base de arranque simulada (data/seed.json) + votos reales de Firestore (stats/votes).
 
 // ── Base de datos v2: lista general + máximo 3 eventos en la portada ──────────
 const BASE_PEOPLE = PEOPLE_DATA.map(p => ({ ...p, noWiki: !p.wiki }));
@@ -469,7 +470,7 @@ export default function App() {
   const [toast,         setToast]         = useState("");
   const people = useMemo(()=>[...BASE_PEOPLE, ...extra]
     .filter(p=>!hidden[p.id])
-    .map(p=>({...p, votes: counts[p.id] || 0})), [extra, hidden, counts]);
+    .map(p=>({...p, votes: (SEED_VOTES[p.id] || 0) + (counts[p.id] || 0)})), [extra, hidden, counts]);
   const [scope,         setScope]         = useState("general"); // "general" o id de evento
   const vkey = id => id; // los eventos usan los mismos votos que la lista general
   const [votes,         setVotes]         = useState({});

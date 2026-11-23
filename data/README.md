@@ -23,3 +23,12 @@ Si quieres recuperar alguno, añádelo a mano en `people.json`.
 ## Fechas y datos de actualidad
 
 Los datos de actualidad (plantillas, entrenadores, candidatos, nominados) están comprobados a 22 de noviembre de 2026. Cuando cambien (mercado de invierno, nominaciones a los Óscar en enero, resultados del 29N), hay que actualizar `sub`, `tags` y los eventos afectados.
+
+## Base de arranque (`seed.json`)
+
+Votos **simulados** para que la web no parezca vacía al lanzar: una estimación de cómo votaría
+el público, generada con `scripts/seed-base.py`. La app los suma a los votos reales de Firestore.
+
+- Política, realeza, activismo, religión y opinadores con perfil político están a 0: ahí solo cuentan los votos reales.
+- El bot de X no los usa: los puestos que menciona salen solo de votos reales.
+- Para retirarla: baja `SCALE` en el script y regenera, o borra el import de `seed.json` en `src/App.jsx`.
