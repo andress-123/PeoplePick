@@ -1,0 +1,59 @@
+{
+  "at": "2026-11-23T08:41:23.653Z",
+  "mode": "simulacion",
+  "trends": 10,
+  "proposals": [
+    {
+      "person": "David Fincher",
+      "trend": "david fincher",
+      "tweet": "David Fincher vuelve a estar en boca de todos: If There’s Generative AI in ‘The Further Mis-Adventures of Cliff Booth,’ It’s Not the First Time David Fincher’s Used It. ¿Qué puesto le darías en el ranking de Cine? #DavidFincher",
+      "reply": "Para votar a David Fincher en un clic: https://people-pick-lsy9.vercel.app/p/david-fincher?utm_source=x&utm_medium=social&utm_campaign=tendencias",
+      "ranking": {
+        "votes": 0,
+        "hasRank": false
+      }
+    },
+    {
+      "person": "Rosalía",
+      "trend": "Rosalía",
+      "tweet": "LUX · Latin Grammy Album of the Year 2026. ¿Cambia esto lo que piensas de Rosalía? En PeoplePick su puesto en Música lo decide la gente. #Rosalía",
+      "reply": "Para votar a Rosalía en un clic: https://people-pick-lsy9.vercel.app/p/rosalia?utm_source=x&utm_medium=social&utm_campaign=tendencias",
+      "ranking": {
+        "votes": 0,
+        "hasRank": false
+      }
+    },
+    {
+      "person": "Alberto Núñez Feijóo",
+      "trend": "Alberto Núñez Feijóo",
+      "tweet": "Hoy se habla de Alberto Núñez Feijóo: PP · Candidate for PM 29N. ¿Arriba o abajo en el ranking de Política? #AlbertoNúñezFeijóo",
+      "reply": "Para votar a Alberto Núñez Feijóo en un clic: https://people-pick-lsy9.vercel.app/p/alberto-nunez-feijoo?utm_source=x&utm_medium=social&utm_campaign=tendencias",
+      "ranking": {
+        "votes": 0,
+        "hasRank": false
+      }
+    },
+    {
+      "person": "Lamine Yamal",
+      "trend": "Lamine Yamal",
+      "tweet": "Lo de Lamine Yamal da para debate. FC Barcelona · Forward · Kopa Trophy 2026. ¿Merece subir en el ranking de Deporte? #LamineYamal",
+      "reply": "Para votar a Lamine Yamal en un clic: https://people-pick-lsy9.vercel.app/p/lamine-yamal?utm_source=x&utm_medium=social&utm_campaign=tendencias",
+      "ranking": {
+        "votes": 0,
+        "hasRank": false
+      }
+    }
+  ],
+  "discarded": [
+    {
+      "trend": "antonio banderas",
+      "person": "Antonio Banderas",
+      "reason": "límite de publicaciones alcanzado"
+    },
+    {
+      "trend": "inde navarrette",
+      "person": "Inde Navarrette",
+      "reason": "límite de publicaciones alcanzado"
+    }
+  ]
+}
