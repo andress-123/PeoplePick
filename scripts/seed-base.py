@@ -4,8 +4,9 @@
 #   python3 scripts/seed-base.py            → regenera data/seed.json
 #
 # · Es una estimación de cómo votaría el público (sobre todo español): no son votos reales.
-# · Política, realeza, activismo, religión y periodistas/opinadores con perfil político
-#   quedan a 0 a propósito: ahí deciden solo los votos reales (p. ej. Elecciones 29N).
+# · Políticos y periodistas/opinadores con perfil político reciben TODOS la misma base
+#   (EVEN): la web no aparece vacía, pero el orden entre ellos (p. ej. Elecciones 29N)
+#   lo deciden solo los votos reales. Realeza, activismo y religión quedan a 0.
 # · El bot de X NO usa esta base: sus puestos salen solo de los votos reales.
 # · Para retirarla poco a poco, baja SCALE (0.5, 0.25…) o borra data/seed.json.
 import json, random, pathlib
@@ -18,6 +19,7 @@ people = json.loads((ROOT / "data/people.json").read_text())
 ids = {p["id"]: p for p in people}
 
 SKIP_CATS = {"Politics", "Royalty", "Activism", "Religion"}
+EVEN = 1500  # base idéntica para políticos y periodistas (sin ruido, a propósito)
 SKIP_IDS = set("""
 elon-musk peter-thiel alex-karp rupert-murdoch federico-jimenez-losantos antonio-garcia-ferreras
 el-gran-wyoming ana-rosa-quintana iker-jimenez jordi-evole vicente-valles javier-ruiz inaki-lopez
@@ -284,6 +286,11 @@ for p in people:
         if rng.random() < 0.12:
             n = -int(n * rng.uniform(0.2, 0.7))
         seed[pid] = int(n * SCALE)
+
+# Políticos y periodistas: exactamente la misma base para todos.
+for p in people:
+    if p["category"] == "Politics" or p["id"] in SKIP_IDS:
+        seed[p["id"]] = int(EVEN * SCALE)
 
 seed = {k: v for k, v in sorted(seed.items(), key=lambda kv: -kv[1]) if v != 0}
 missing = [k for k in BASE if k not in ids]
